@@ -2,6 +2,7 @@ import cv2
 import argparse
 import webcolors
 import numpy as np
+import matplotlib.pyplot as plt
 
 def get_args(parser):
     parser.add_argument(
@@ -100,6 +101,8 @@ def mean_colour(frame):
     print ("mean actual colour name:", actual_name)
     print ("mean closest colour name:", closest_name)
 
+    return average, colors
+
 def dominant_color(frame):
 
     pixels = np.float32(frame.reshape(-1, 3))
@@ -119,6 +122,9 @@ def dominant_color(frame):
     print ("dominant actual colour name:", actual_name)
     print ("dominant closest colour name:", closest_name)
 
+def histogram(frame):
+    # Initialize plot.
+    pass
 
 def main():
     print("plastic-cv:webcam...")
@@ -128,6 +134,34 @@ def main():
 
     if args.colours:
         vid = cv2.VideoCapture(0)
+
+        # Initialize plot window
+        color = "rgb"
+        bins = 128
+        resizeWidth = 500
+
+        plt.ion()
+        fig, ax = plt.subplots()
+
+        if color == 'rgb':
+            ax.set_title('Histogram (RGB)')
+        else:
+            ax.set_title('Histogram (grayscale)')
+
+        ax.set_xlabel('Bin')
+        ax.set_ylabel('Frequency')
+
+        lw = 3
+        alpha = 0.5
+        if color == 'rgb':
+            lineR, = ax.plot(np.arange(bins), np.zeros((bins,)), c='r', lw=lw, alpha=alpha)
+            lineG, = ax.plot(np.arange(bins), np.zeros((bins,)), c='g', lw=lw, alpha=alpha)
+            lineB, = ax.plot(np.arange(bins), np.zeros((bins,)), c='b', lw=lw, alpha=alpha)
+        else:
+            lineGray, = ax.plot(np.arange(bins), np.zeros((bins,1)), c='k', lw=lw)
+        ax.set_xlim(0, bins-1)
+        ax.set_ylim(0, 1)
+
         try:
             while True:
 
@@ -138,7 +172,33 @@ def main():
                 cv2.imshow('frame', frame)
                 
                 # colour_detection(vid)
-                mean_colour(frame)
+                m, c = mean_colour(frame)
+
+                # histogram 
+                if resizeWidth > 0:
+                    (height, width) = frame.shape[:2]
+                    resizeHeight = int(float(resizeWidth / width) * height)
+                    frame = cv2.resize(frame, (resizeWidth, resizeHeight),
+                        interpolation=cv2.INTER_AREA)
+
+                # Normalize histograms based on number of pixels per frame.
+                numPixels = np.prod(frame.shape[:2])
+                if color == 'rgb':
+                    (b, g, r) = cv2.split(frame)
+                    histogramR = cv2.calcHist([r], [0], None, [bins], [0, 255]) / numPixels
+                    histogramG = cv2.calcHist([g], [0], None, [bins], [0, 255]) / numPixels
+                    histogramB = cv2.calcHist([b], [0], None, [bins], [0, 255]) / numPixels
+                    lineR.set_ydata(histogramR)
+                    lineG.set_ydata(histogramG)
+                    lineB.set_ydata(histogramB)
+                else:
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    histogram = cv2.calcHist([gray], [0], None, [bins], [0, 255]) / numPixels
+                    lineGray.set_ydata(histogram)
+                
+                fig.canvas.draw()
+                fig.canvas.flush_events()
+                
                 # dominant_color(frame)
 
                 # press Q to stop
