@@ -97,7 +97,10 @@ def main():
                 mask = cv2.inRange(frame, minRange, maxRange)
                 masked_frame = cv2.bitwise_and(frame, frame, mask=mask)
                 cv2.imshow('masked_frame', masked_frame)
-                
+
+                # Perform estimates on filterd frame
+                print(f"\nFiltered Frame:")
+                m, c = mean_colour(masked_frame)               
                 # dominant_color(frame)
 
                 # press Q to stop
