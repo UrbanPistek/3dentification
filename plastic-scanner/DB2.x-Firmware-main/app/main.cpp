@@ -11,7 +11,8 @@
 #include <SPI.h>
 #include <Wire.h>
 
-static const int CLKSPEED_MHZ = 8;
+// static const int CLKSPEED_MHZ = 8;
+static const int CLKSPEED_MHZ = 7.68;
 static const float VREF = 2.5;
 
 ADS1256 adc(CLKSPEED_MHZ, VREF, false);
@@ -20,6 +21,7 @@ Cli cli;
 
 void scan(int argc, char *argv[])
 {
+    Serial.println("Performing Scan...");
     float readings[8] = {0};
     for (int i=0; i<8; i++) {
         ledctrl.on(i);
@@ -27,6 +29,35 @@ void scan(int argc, char *argv[])
         adc.waitDRDY(); 
         readings[i] = adc.readCurrentChannel();
         ledctrl.off(i);
+
+        Serial.print("Reading ");
+        Serial.println(i);
+        Serial.print(readings[i], 5);
+        Serial.print('\t');
+    }
+
+    for (int i=0; i<8; i++) {
+        Serial.print(readings[i], 5);
+        Serial.print('\t');
+    }
+    Serial.println();
+}
+
+void test_scan(void)
+{
+    Serial.println("Performing Test Scan...");
+    float readings[8] = {0};
+    for (int i=0; i<8; i++) {
+        ledctrl.on(i);
+        delay(5);
+        adc.waitDRDY(); 
+        readings[i] = adc.readCurrentChannel();
+        ledctrl.off(i);
+
+        Serial.print("Reading ");
+        Serial.println(i);
+        Serial.print(readings[i], 5);
+        Serial.print('\t');
     }
 
     for (int i=0; i<8; i++) {
@@ -38,8 +69,15 @@ void scan(int argc, char *argv[])
 
 void read_adc(int argc, char *argv[])
 {
+    Serial.println("Reading ADC...");
+    Serial.print("pinDRDY: ");
+    Serial.println(digitalRead(pinDRDY));
+    
     adc.waitDRDY(); 
+    Serial.println("adc.waitDRDY();");
+    
     float val = adc.readCurrentChannel();
+    Serial.println("==> Channel Read");
     Serial.println(val , 5);
 }
 
@@ -78,7 +116,7 @@ void setup()
     SPI.begin();
     Wire.begin();
     ledctrl.begin();
-    adc.begin(ADS1256_DRATE_30000SPS,ADS1256_GAIN_1,false); 
+    adc.begin(ADS1256_DRATE_30000SPS, ADS1256_GAIN_1, false); 
     adc.setChannel(0,1);    // differential ADC reading 
 
     cli.add_command({"scan", scan, "Perform a scan sequence: for each led measure adc value"});
@@ -88,10 +126,27 @@ void setup()
     cli.begin();
 
     Serial.println("PlasticScanner is initialized!");
+
+    // Test ADC read
+    Serial.println("Test Reading ADC...");
+    Serial.print("pinDRDY: ");
+    Serial.println(digitalRead(pinDRDY));
+    
+    float val = adc.readCurrentChannel();
+    Serial.println("==> Channel Read");
+    Serial.println(val , 5);
+
+    Serial.print("pinDRDY: ");
+    Serial.println(digitalRead(pinDRDY));
+
+    // Test scan
+    // test_scan();
 }
 
 void loop()
 {
     cli.handle();
+    // Serial.print("pinDRDY: ");
+    // Serial.println(digitalRead(pinDRDY));
 }
 
