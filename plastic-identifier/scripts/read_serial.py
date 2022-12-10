@@ -74,8 +74,9 @@ def main():
 
     elif args.scan:
         ts = time.time()
-
-        data = write_read_blocking(arduino, "scan", num_bytes=116)
+        
+        num_bytes = 129 # Size of struct: 128 + stop bit
+        data = write_read_blocking(arduino, "scan", num_bytes=num_bytes)
         print(f"Scan:\n{data}")   
         print(f"size: {sys.getsizeof(data)}")     
         
