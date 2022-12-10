@@ -10,6 +10,15 @@ Firmware written using Platform IO.
 pio run
 ```
 
+**Run**
+```
+pio run --target upload
+```
+
+## Libraries
+
+[ArduinoJson](https://arduinojson.org/): Create json serializable objects
+
 ## ADS1256 Driver Reference
 
 [Datasheet](https://www.win-source.net/datasheet/43633/ADS1256IDBT.pdf)
