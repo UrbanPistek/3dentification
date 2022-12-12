@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+message Scan {
+    float led1 = 1; 
+    float led2 = 2; 
+    float led3 = 3; 
+    float led4 = 4; 
+    float led5 = 5; 
+    float led6 = 6; 
+    float led7 = 7; 
+    float led8 = 8; 
+}
