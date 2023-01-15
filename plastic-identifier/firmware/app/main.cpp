@@ -133,6 +133,20 @@ String serial_str;
         serializeJson(scan_doc, Serial);
     }
 
+    void read(int ledNumber)
+    {
+        float reading = 0;
+
+        ledctrl.on(ledNumber);
+        delay(5000);
+        adc.waitDRDY(); 
+        reading = adc.readCurrentChannel();
+        ledctrl.off(ledNumber);
+
+        delay(25);
+        Serial.print(reading);
+    }
+
 #endif
 
 void setup()
@@ -205,6 +219,16 @@ void setup()
         {
             // run scan
             scan();
+        }
+        else if (serial_str == "read")
+        {
+            // wait for user to input which LED to read
+            while (Serial.available() == 0);
+
+            int ledNumber = Serial.parseInt();
+
+            // Serial.print(ledNumber);
+            read(ledNumber);
         }
 
         // Wait for outgoing data to be sent
