@@ -27,6 +27,8 @@ TLC59208 ledctrl;
 
 // Scan data doc
 StaticJsonDocument<128> scan_doc;
+StaticJsonDocument<128> calib_doc;
+StaticJsonDocument<128> spectrum_doc;
 
 // Read from serial
 String serial_str;
@@ -102,10 +104,10 @@ String serial_str;
         cli.list_commands();
     }
 
+#endif
 /*
     Functions that run through the Serial interface. 
 */
-#endif
 #if SERIAL_MODE
 
     void ping(void)
@@ -125,12 +127,74 @@ String serial_str;
         }
 
         for (int i=0; i<8; i++) {
-
             // set key value
             String key = "led" + String(i+1);
             scan_doc[key] = readings[i];
         }
         serializeJson(scan_doc, Serial);
+    }
+
+    void calibrate()
+    {
+        // LED scatter
+        float scatter_readings[8] = {0};
+        for (int i=0; i<8; i++) {
+            ledctrl.on(i);
+            delay(5);
+            adc.waitDRDY();
+            scatter_readings[i] = adc.readCurrentChannel();
+            
+            // set key value
+            String key = "led" + String(i+1);
+            calib_doc[key] = scatter_readings[i];
+        }
+    }
+
+    void gen_spectra(uint8_t exposure_time_ms, uint8_t num_readings, bool ambient)
+    {
+        // TODO: check if LED scatter calibration was done
+        // _______________________________________________
+
+        // initial ambient light
+        for (int i=0; i<8; i++) {
+            ledctrl.off(i);
+        }
+        delay(exposure_time_ms);
+        adc.waitDRDY();
+        calib_doc["ambient0"] = adc.readCurrentChannel(); 
+
+        // scan
+        float ambient_readings[8] = {0};
+        float scan_readings[8] = {0};
+        for (int n=0; n<num_readings; n++) {
+            for (int i=0; i<8; i++) {
+                // read reflectance from LED
+                ledctrl.on(i);
+                delay(exposure_time_ms);
+                adc.waitDRDY(); 
+                scan_readings[i] = adc.readCurrentChannel();
+
+                // log reflectance reading
+                String key1 = "rdg" + String(n+1) + "led" + String(i+1);
+                scan_doc[key1] = scan_readings[i];
+
+                if (ambient) {
+                    // read ambient light
+                    ledctrl.off(i);
+                    delay(exposure_time_ms);
+                    adc.waitDRDY();
+                    ambient_readings[i] = adc.readCurrentChannel();
+
+                    // log ambient reading
+                    String key2 = "rdg" + String(n+1) + "ambient" + String(i+1);
+                    calib_doc[key2] = ambient_readings[i];
+                }
+            }
+        }
+
+        serializeJson(scan_doc, Serial);
+        serializeJson(calib_doc, Serial);
+        return;
     }
 
     void read(int ledNumber)
@@ -180,6 +244,28 @@ void setup()
     #endif
     #if SERIAL_MODE
 
+        // Initialize calibration doc
+        // led scatter
+        calib_doc["led1"] = 0.0;
+        calib_doc["led2"] = 0.0;
+        calib_doc["led3"] = 0.0;
+        calib_doc["led4"] = 0.0;
+        calib_doc["led5"] = 0.0;
+        calib_doc["led6"] = 0.0;
+        calib_doc["led7"] = 0.0;
+        calib_doc["led8"] = 0.0;
+        
+        // ambient light
+        calib_doc["ambient0"] = 0.0; // initial ambient light
+        calib_doc["ambient1"] = 0.0; // ambient light after led1 scan
+        calib_doc["ambient2"] = 0.0; // ambient light after led2 scan
+        calib_doc["ambient3"] = 0.0; // ...
+        calib_doc["ambient4"] = 0.0;
+        calib_doc["ambient5"] = 0.0;
+        calib_doc["ambient6"] = 0.0;
+        calib_doc["ambient7"] = 0.0;
+        calib_doc["ambient8"] = 0.0;
+
         // Initialize scan doc
         scan_doc["led1"] = 0.0;
         scan_doc["led2"] = 0.0;
@@ -219,6 +305,11 @@ void setup()
         {
             // run scan
             scan();
+        }
+        else if (serial_str == "gen_spectrum")
+        {
+            // generate spectrum
+            gen_spectrum();
         }
         else if (serial_str == "read")
         {
