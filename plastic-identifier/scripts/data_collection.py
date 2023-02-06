@@ -10,7 +10,7 @@ from read_serial import write_read, write_read_blocking
 
 # Number of readings to perform
 NUM_READINGS = 10
-FILENAME = 'empty_with_colar.csv'
+FILENAME = 'sample_test_run.csv'
 
 def main():
 
@@ -69,10 +69,11 @@ def main():
         os.makedirs('data')
 
     df = pd.DataFrame.from_dict(readings)
-    df.to_csv(F"./data/{FILENAME}")
+    df.to_csv(f"./data/{FILENAME}")
     
     te = time.time()
     print(f"\nElapsed time: {te - ts}s")
 
 if __name__ == "__main__":
     main()
+
