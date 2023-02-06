@@ -145,7 +145,8 @@ String serial_str;
         serializeJson(scan_doc, Serial);
     }
 
-    float calc_variance(float readings[], int n, float mean){
+    float calc_variance(float readings[], int n, float mean)
+    {
         // Compute sum squared
         // differences with mean.
         double sq_diff = 0;
@@ -156,7 +157,6 @@ String serial_str;
 
     void gen_spectra(uint8_t exposure_time_ms, uint8_t num_readings)
     {
-
         // ensure all LEDs are off to start
         for (int i = 0; i < NUM_LEDS; i++) {
             ledctrl.off(i);
