@@ -19,6 +19,16 @@
 #define SERIAL_MODE !CLI_MODE
 #define DEVELOP_MODE false
 
+// Number of LEDs being used
+#define NUM_LEDS 8
+
+// Settings for generating spectra
+#define EXPOSURE_TIME_MS 5
+#define SPECTRA_NUM_READINGS 25
+
+// Map negative ADC values to be positive
+#define MAP_NEGATIVE_ADC_VALUES true
+
 static const int CLKSPEED_MHZ = 7.68;
 static const float VREF = 2.5;
 
@@ -27,8 +37,9 @@ TLC59208 ledctrl;
 
 // Scan data doc
 StaticJsonDocument<128> scan_doc;
-StaticJsonDocument<128> calib_doc;
-StaticJsonDocument<128> spectrum_doc;
+
+// Spectrum data document
+StaticJsonDocument<512> spectra_doc;
 
 // Read from serial
 String serial_str;
@@ -134,66 +145,79 @@ String serial_str;
         serializeJson(scan_doc, Serial);
     }
 
-    void calibrate()
-    {
-        // LED scatter
-        float scatter_readings[8] = {0};
-        for (int i=0; i<8; i++) {
-            ledctrl.on(i);
-            delay(5);
-            adc.waitDRDY();
-            scatter_readings[i] = adc.readCurrentChannel();
-            
-            // set key value
-            String key = "led" + String(i+1);
-            calib_doc[key] = scatter_readings[i];
-        }
+    float calc_variance(float readings[], int n, float mean){
+        // Compute sum squared
+        // differences with mean.
+        double sq_diff = 0;
+        for (int i = 0; i < n; i++)
+            sq_diff += (readings[i] - mean)*(readings[i] - mean);
+        return sq_diff / n;
     }
 
-    void gen_spectra(uint8_t exposure_time_ms, uint8_t num_readings, bool ambient)
+    void gen_spectra(uint8_t exposure_time_ms, uint8_t num_readings)
     {
-        // TODO: check if LED scatter calibration was done
-        // _______________________________________________
 
-        // initial ambient light
-        for (int i=0; i<8; i++) {
+        // ensure all LEDs are off to start
+        for (int i = 0; i < NUM_LEDS; i++) {
             ledctrl.off(i);
+            delay(5); // 5ms delay
         }
-        delay(exposure_time_ms);
-        adc.waitDRDY();
-        calib_doc["ambient0"] = adc.readCurrentChannel(); 
 
-        // scan
-        float ambient_readings[8] = {0};
-        float scan_readings[8] = {0};
-        for (int n=0; n<num_readings; n++) {
-            for (int i=0; i<8; i++) {
+        // Store values
+        float ambient_readings[NUM_LEDS] = {0};
+        float ambient_reading = 0.0;
+
+        float scan_readings[NUM_LEDS] = {0};
+        float variances[NUM_LEDS] = {0};
+        float current_readings[num_readings] = {0};
+    
+        for (int i = 0; i < NUM_LEDS; i++) {
+            
+            for (int n = 0; n < num_readings; n++) {
+                
                 // read reflectance from LED
                 ledctrl.on(i);
                 delay(exposure_time_ms);
                 adc.waitDRDY(); 
-                scan_readings[i] = adc.readCurrentChannel();
 
-                // log reflectance reading
-                String key1 = "rdg" + String(n+1) + "led" + String(i+1);
-                scan_doc[key1] = scan_readings[i];
-
-                if (ambient) {
-                    // read ambient light
-                    ledctrl.off(i);
-                    delay(exposure_time_ms);
-                    adc.waitDRDY();
-                    ambient_readings[i] = adc.readCurrentChannel();
-
-                    // log ambient reading
-                    String key2 = "rdg" + String(n+1) + "ambient" + String(i+1);
-                    calib_doc[key2] = ambient_readings[i];
+                // get current reading
+                current_readings[n] = adc.readCurrentChannel(); // storing to determine variance later
+                if (MAP_NEGATIVE_ADC_VALUES && current_readings[n] < 0){
+                    current_readings[n] *= -1;
                 }
+                scan_readings[i] += current_readings[n]; 
+
+                // read ambient light
+                ledctrl.off(i);
+                delay(exposure_time_ms);
+                adc.waitDRDY();
+
+                ambient_reading = adc.readCurrentChannel();
+                if (MAP_NEGATIVE_ADC_VALUES && ambient_reading < 0){
+                    ambient_reading *= -1;
+                }
+                ambient_readings[i] += ambient_reading;
+
             }
+
+            // get mean and calculate variance
+            scan_readings[i] = scan_readings[i] / num_readings;
+            ambient_readings[i] = ambient_readings[i] / num_readings;
+            variances[i] = calc_variance(current_readings, num_readings, scan_readings[i]);
+
+            // log reflectance reading + variance
+            String key1 = "led" + String(i);
+            String key2 = "led" + String(i) + "_var";
+            spectra_doc[key1] = scan_readings[i];
+            spectra_doc[key2] = variances[i];
+
+            // log ambient reading
+            String key3 = "led" + String(i) + "_ambient";
+            spectra_doc[key3] = ambient_readings[i];
         }
 
-        serializeJson(scan_doc, Serial);
-        serializeJson(calib_doc, Serial);
+        serializeJson(spectra_doc, Serial);
+
         return;
     }
 
@@ -244,27 +268,38 @@ void setup()
     #endif
     #if SERIAL_MODE
 
-        // Initialize calibration doc
-        // led scatter
-        calib_doc["led1"] = 0.0;
-        calib_doc["led2"] = 0.0;
-        calib_doc["led3"] = 0.0;
-        calib_doc["led4"] = 0.0;
-        calib_doc["led5"] = 0.0;
-        calib_doc["led6"] = 0.0;
-        calib_doc["led7"] = 0.0;
-        calib_doc["led8"] = 0.0;
+        // Initialize spectra doc
+        spectra_doc["led0"] = 0.0;
+        spectra_doc["led0_var"] = 0.0;
+        spectra_doc["led0_ambient"] = 0.0;
         
-        // ambient light
-        calib_doc["ambient0"] = 0.0; // initial ambient light
-        calib_doc["ambient1"] = 0.0; // ambient light after led1 scan
-        calib_doc["ambient2"] = 0.0; // ambient light after led2 scan
-        calib_doc["ambient3"] = 0.0; // ...
-        calib_doc["ambient4"] = 0.0;
-        calib_doc["ambient5"] = 0.0;
-        calib_doc["ambient6"] = 0.0;
-        calib_doc["ambient7"] = 0.0;
-        calib_doc["ambient8"] = 0.0;
+        spectra_doc["led1"] = 0.0;
+        spectra_doc["led1_var"] = 0.0;
+        spectra_doc["led1_ambient"] = 0.0;
+
+        spectra_doc["led2"] = 0.0;
+        spectra_doc["led2_var"] = 0.0;
+        spectra_doc["led2_ambient"] = 0.0;
+
+        spectra_doc["led3"] = 0.0;
+        spectra_doc["led3_var"] = 0.0;
+        spectra_doc["led3_ambient"] = 0.0;
+
+        spectra_doc["led4"] = 0.0;
+        spectra_doc["led4_var"] = 0.0;
+        spectra_doc["led4_ambient"] = 0.0;
+
+        spectra_doc["led5"] = 0.0;
+        spectra_doc["led5_var"] = 0.0;
+        spectra_doc["led5_ambient"] = 0.0;
+
+        spectra_doc["led6"] = 0.0;
+        spectra_doc["led6_var"] = 0.0;
+        spectra_doc["led6_ambient"] = 0.0;
+
+        spectra_doc["led7"] = 0.0;
+        spectra_doc["led7_var"] = 0.0;
+        spectra_doc["led7_ambient"] = 0.0;
 
         // Initialize scan doc
         scan_doc["led1"] = 0.0;
@@ -306,10 +341,10 @@ void setup()
             // run scan
             scan();
         }
-        else if (serial_str == "gen_spectrum")
+        else if (serial_str == "gen_spectra")
         {
-            // generate spectrum
-            gen_spectrum();
+            // generate spectra
+            gen_spectra(EXPOSURE_TIME_MS, SPECTRA_NUM_READINGS);
         }
         else if (serial_str == "read")
         {
