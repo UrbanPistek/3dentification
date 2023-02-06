@@ -267,14 +267,97 @@ def plot5(save=False):
     else:
         plt.show()
 
+def plot6(save=False):
+    """
+    Compare discrete and continous ABS / PLA spectra. 
+    """
+
+    # Read data
+    df1 = pd.read_csv("./data/plastic_2_hdpe_white.csv")
+    df2 = pd.read_csv("./data/plastic_5_pp_white.csv")
+    df3 = pd.read_csv("./data/plastic_6_ps_white.csv")
+    df4 = pd.read_csv("./data/plastic_7_pla_white.csv")
+    df5 = pd.read_csv("./data/empty.csv")
+
+    dfs = [df1, df2, df3, df4, df5]
+    mins = []
+    maxs = []
+    for df in dfs:
+        
+        # Drop extra column
+        df = df.drop(['Unnamed: 0'], axis=1)
+        # Map any none-zero values to zero
+        df[df < 0] = 0.0
+
+        mins.append(df.to_numpy().min())
+        maxs.append(df.to_numpy().max())
+
+        # print(df.head())
+
+    min1 = min(mins)
+    max1 = max(maxs)
+
+    means = []
+    for df in dfs:
+        
+        # Drop extra column
+        df = df.drop(['Unnamed: 0'], axis=1)
+        # Map any none-zero values to zero
+        df[df < 0] = 0.0
+
+        mean = np.asarray(( df.mean(axis=0).values - min1) / (max1 - min1))
+        means.append(mean)
+
+    fig1, (ax1, ax2, ax3) = plt.subplots(3, 1, gridspec_kw={'height_ratios': [2, 1, 1]}, figsize=(12,7), sharex=True)
+
+    # Overall Plot
+    ax1.set_title(f"Comparing Plastic Types")
+
+    labels = ['Type2 (HDPE)', 'Type5 (PP)', 'Type6 (PS)', 'Type7 (PLA)', 'Empty']
+    colors = ['r', 'b', 'g', 'k', 'm']
+    for i, m in enumerate(means):
+        ax1.plot(xs, m, c=colors[i], label=labels[i])
+
+    # Higher Intensity Plots
+    indeces1 = [0, 1, 2, 7]
+    for i, m in enumerate(means):
+        xs1 = [xs[j] for j in indeces1]
+        m1 = [m[j] for j in indeces1]
+        ax2.scatter(xs1, m1, c=colors[i], label=labels[i])
+
+    # Lower Intensity Plots
+    indeces2 = [3, 4, 5, 6]
+    for i, m in enumerate(means):
+        xs2 = [xs[j] for j in indeces2]
+        m2 = [m[j] for j in indeces2]
+        ax3.scatter(xs2, m2, c=colors[i], label=labels[i])
+
+    ax1.set_ylabel("Relative Intensity")
+    ax3.set_xlabel("Wavelength (nm)")
+    ax1.legend()
+    ax2.legend()
+    ax3.legend()
+
+    # save plot and results
+    if save:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        # save plot
+        filename = f"plastics_white_1"
+        plt.savefig(f'figures/{filename}.png')
+    else:
+        plt.show()
+
 def main():
     print("Generating Plots...")
 
-    plot1(save=True)
-    plot2(save=True)
-    plot3(save=True)
-    plot4(save=True)
-    plot5(save=True)
+    # plot1(save=True)
+    # plot2(save=True)
+    # plot3(save=True)
+    # plot4(save=True)
+    # plot5(save=True)
+    plot6(save=True)
 
 if __name__ == "__main__":
     main()

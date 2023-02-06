@@ -24,6 +24,11 @@ def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_a
         action='store_true',
         help='Read scan from Arduino')
     parser.add_argument(
+        "-r",
+        "--read", 
+        type= int,
+        help='Read Specified LED')
+    parser.add_argument(
         "-f",
         "--full", 
         action='store_true',
@@ -94,6 +99,22 @@ def main():
             print(f"Dict:\n{data_dict}")
             print(f"Dict['led1']: {data_dict['led1']}")
             print(f"type:\n{type(data_dict)}")
+    
+    elif args.read is not None:
+        print(f"Performing read for: {args.read}")
+    
+        value = write_read(arduino, "read")
+        print(f"Read:\n{value}")
+
+        try:
+            data = write_read(arduino, str({args.read}))
+            print(f"Read led[{args.read}]: {len(data)}")   
+
+            if sys.getsizeof(data) > 33: # check against empty
+                print(f"Data: {data}")
+
+        except:
+            print("ERROR: Read")
 
     elif args.full:
         messages = ["ping", "adc", "scan"]
