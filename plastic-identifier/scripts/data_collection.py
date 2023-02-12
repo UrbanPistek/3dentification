@@ -9,7 +9,7 @@ from lib.utils import get_serial_ports
 from read_serial import write_read, write_read_blocking
 
 # Number of readings to perform
-FILENAME = 'sample_test.csv'
+FILENAME = 'abs_blue_no_collar.csv'
 
 def main():
 

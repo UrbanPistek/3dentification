@@ -286,7 +286,7 @@ def plot6(save=False):
         
         # Drop extra column
         df = df.drop(['Unnamed: 0'], axis=1)
-        # Map any none-zero values to zero
+        # Map any negative values to zero
         df[df < 0] = 0.0
 
         mins.append(df.to_numpy().min())
@@ -302,7 +302,7 @@ def plot6(save=False):
         
         # Drop extra column
         df = df.drop(['Unnamed: 0'], axis=1)
-        # Map any none-zero values to zero
+        # Map any negative values to zero
         df[df < 0] = 0.0
 
         mean = np.asarray(( df.mean(axis=0).values - min1) / (max1 - min1))
@@ -349,6 +349,73 @@ def plot6(save=False):
     else:
         plt.show()
 
+def plot7(save=False):
+    """
+    Plot displaying red ABS
+    """
+
+    # Read data
+    df1 = pd.read_csv("./data/boardv2_abs_red_no_collar.csv")
+    df2 = pd.read_csv("./data/boardv2_abs_green_no_collar.csv")
+    #df1 = df1.drop(['Unnamed: 0'], axis=1)
+    #df2 = df2.drop(['Unnamed: 0'], axis=1)
+    print(df1.head())
+
+    df1T = df1.set_index('Unnamed: 0').T
+    df2T = df2.set_index('Unnamed: 0').T
+
+    print(df1T.head())
+
+    df_intensity = pd.concat([df1T['intensity'], df2T['intensity']], axis = 1, keys=['red','green'])
+    # TODO: Add deviation and ambient
+
+    print(df_intensity.head())
+
+    df_intensity.plot(kind='bar', figsize=(10,6), xticks=range(0, 8)).legend(title='data', bbox_to_anchor=(1, 1))
+
+    # means
+    # mean1 = df1.mean(axis=0).values
+    # mean2 = df2.mean(axis=0).values
+    # print(mean1)
+
+    # fig1, (ax1) = plt.subplots(1, 1, figsize=(12,7), sharex=True)
+
+    # # Means & Best plot
+    # ax1.set_title(f"DNIR Reading: Red ABS vs Green ABS")
+
+    # std1 = []
+    # std2 = []
+    # for i in range(0, 8):
+    #     values1 = df1[f'led{i+1}'].values
+    #     values2 = df2[f'led{i+1}'].values
+    #     std1.append(np.std(values1))
+    #     std2.append(np.std(values2))
+
+    #     ax1.scatter([xs[i]]*len(df1[f'led{i+1}'].values), values1, c='m')
+    #     ax1.scatter([xs[i]]*len(df2[f'led{i+1}'].values), values2, c='c')
+
+    # # Add mean lines
+    # ax1.plot(xs, mean1, c='m', label='pla_mean', linestyle='--')
+    # ax1.plot(xs, mean2, c='c', label='abs_mean', linestyle='--')
+    
+    # mean_std1 = np.format_float_scientific(np.asarray(std1).mean(axis=0), precision=2)
+    # mean_std2 = np.format_float_scientific(np.asarray(std2).mean(axis=0), precision=2)
+
+    # ax1.set_ylabel("Relative Intensity")
+    # ax1.set_xlabel("Wavelength (nm)")
+    # ax1.legend([f"pla [std: {mean_std1}]", f"abs [std: {mean_std2}]"])
+
+    # save plot and results
+    if save:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        # save plot
+        filename = f"board2_abs_red_plot1"
+        plt.savefig(f'figures/{filename}.png')
+    else:
+        plt.show()
+
 def main():
     print("Generating Plots...")
 
@@ -357,7 +424,8 @@ def main():
     # plot3(save=True)
     # plot4(save=True)
     # plot5(save=True)
-    plot6(save=True)
+    # plot6(save=True)
+    plot7(save=True)
 
 if __name__ == "__main__":
     main()
