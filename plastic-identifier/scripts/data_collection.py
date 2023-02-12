@@ -6,9 +6,9 @@ import json
 import pandas as pd
 
 from lib.utils import get_serial_ports
-from read_serial import write_read, write_read_blocking
+from utils.read_serial import write_read
 
-# Number of readings to perform
+# Specify file to save data to
 FILENAME = 'sample_test.csv'
 
 def main():
