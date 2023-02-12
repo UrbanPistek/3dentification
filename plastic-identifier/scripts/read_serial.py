@@ -33,6 +33,11 @@ def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_a
         "--full", 
         action='store_true',
         help='Send all commands to the Arduino')
+    parser.add_argument(
+        "-g",
+        "--gen_spectra", 
+        action='store_true',
+        help='Get a full spectra from the Ardunio')
 
     return parser.parse_args()
 
@@ -99,6 +104,23 @@ def main():
             print(f"Dict:\n{data_dict}")
             print(f"Dict['led1']: {data_dict['led1']}")
             print(f"type:\n{type(data_dict)}")
+
+    elif args.gen_spectra:
+
+        num_bytes = 513 # Size of struct: 513 + stop bit
+        data = write_read_blocking(arduino, "gen_spectra", num_bytes=num_bytes)
+        
+        print(f"\nGen Spectra...")   
+        print(f"size: {sys.getsizeof(data)}")     
+        
+        if sys.getsizeof(data) > 33: # check against empty
+
+            # Decode byte object
+            data_decoded = data.decode('utf-8')
+
+            # convert to dict
+            data_dict = json.loads(data_decoded)
+            print(f"data:\n{data_dict}")
     
     elif args.read is not None:
         print(f"Performing read for: {args.read}")

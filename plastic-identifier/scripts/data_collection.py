@@ -9,8 +9,7 @@ from lib.utils import get_serial_ports
 from read_serial import write_read, write_read_blocking
 
 # Number of readings to perform
-NUM_READINGS = 10
-FILENAME = 'sample_test_run.csv'
+FILENAME = 'sample_test.csv'
 
 def main():
 
@@ -24,7 +23,10 @@ def main():
 
     ts = time.time()
 
-    readings = {
+    value = write_read(arduino, "ping")
+    print(f"Ping:\n{value}")
+    data_dict = {
+        "led0": [],
         "led1": [],
         "led2": [],
         "led3": [],
@@ -32,44 +34,37 @@ def main():
         "led5": [],
         "led6": [],
         "led7": [],
-        "led8": [],
-    }
+    } 
 
-    value = write_read(arduino, "ping")
-    print(f"Ping:\n{value}")
+    try:
+        data = write_read(arduino, "gen_spectra")
+        # print(f"Gen Spectra:\n{data}")   
 
-    for i in range(NUM_READINGS):
+        if sys.getsizeof(data) > 33: # check against empty
 
-        try:
-            data = write_read(arduino, "scan")
-            print(f"Scan:\n{data}")   
+            # Decode byte object
+            data_decoded = data.decode('utf-8')
 
-            if sys.getsizeof(data) > 33: # check against empty
+            # convert to dict
+            readings = json.loads(data_decoded)
 
-                # Decode byte object
-                data_decoded = data.decode('utf-8')
+            for key in data_dict:
 
-                # convert to dict
-                data_dict = json.loads(data_decoded)
+                data_dict[key].append(readings[key])
+                data_dict[key].append(readings[f"{key}_var"])
+                data_dict[key].append(readings[f"{key}_ambient"])
 
-                # store readings
-                readings['led1'].append(data_dict['led1'])
-                readings['led2'].append(data_dict['led2'])
-                readings['led3'].append(data_dict['led3'])
-                readings['led4'].append(data_dict['led4'])
-                readings['led5'].append(data_dict['led5'])
-                readings['led6'].append(data_dict['led6'])
-                readings['led7'].append(data_dict['led7'])
-                readings['led8'].append(data_dict['led8'])
-        except:
-            print("ERROR: read")
-            continue
+    except:
+        print("ERROR: read")
+        return 
 
     if not os.path.exists('data'):
         os.makedirs('data')
 
-    df = pd.DataFrame.from_dict(readings)
+    df = pd.DataFrame.from_dict(data_dict)
+    df.index = ['intensity', 'variance', 'ambient']
     df.to_csv(f"./data/{FILENAME}")
+    print(df.head())
     
     te = time.time()
     print(f"\nElapsed time: {te - ts}s")
