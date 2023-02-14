@@ -9,7 +9,7 @@ from lib.utils import get_serial_ports
 from utils.read_serial import write_read
 
 # Specify file to save data to
-FILENAME = 'sample_test.csv'
+FILENAME = 'boardv1_white_abs.csv'
 
 def main():
 
