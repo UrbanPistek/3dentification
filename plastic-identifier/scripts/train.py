@@ -9,10 +9,13 @@ import numpy as np
 np.set_printoptions(precision=7, suppress=True)
 
 # Internal modules
-from lib.postprocess import SpectraGen, subtract_noise 
+from lib.postprocess import SpectraGen
 
 def main():
     print("Spectra Classifier Training...")
+    
+    # Spectra generation object
+    Spectra = SpectraGen()
 
     reference = "./data/boardv1_white_abs.csv"
     measurements = "./data/boardv1_mock_abs.csv"
@@ -53,10 +56,10 @@ def main():
     # Subtract out noise
     cali_signal = cali[0] - cali[2]
     cali_signal[cali_signal < 0] = 0 # Any negative values from the subtraction get mapped to zero
-    print(f"ref intensity: {cali[0]} \nref noise: {cali[2]} \nref signal: {cali_signal}")
+    print(f"cali intensity: {cali[0]} \ncali noise: {cali[2]} \ncali signal: {cali_signal}")
     
     # ================== [Measurements] ==================
-    vals_signal = subtract_noise(df_vals)
+    vals_signal = Spectra.subtract_noise(df_vals)
     print(f"\nvals signal: {vals_signal}")
 
 if __name__ == "__main__":

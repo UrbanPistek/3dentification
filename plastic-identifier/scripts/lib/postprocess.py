@@ -2,20 +2,9 @@ import copy
 import pandas as pd
 import numpy as np
 
-def subtract_noise(df: pd.DataFrame) -> np.ndarray: 
-
-    new_df = df.drop(['units'], axis=1)
-    new_df = new_df.to_numpy()
-
-    # Subtract out noise
-    signal = new_df[0] - new_df[2]
-    signal[signal < 0] = 0 # Any negative values from the subtraction get mapped to zero
-
-    return signal
-
 class SpectraGen: 
 
-    def __init__(self, measurements: pd.DataFrame, led_wavelengths: np.ndarray, ref: np.ndarray = np.zeros(8), cal: np.ndarray = np.zeros(8)) -> None:
+    def __init__(self, measurements: pd.DataFrame = pd.DataFrame(), led_wavelengths: np.ndarray = np.zeros(8), ref: np.ndarray = np.zeros(8), cal: np.ndarray = np.zeros(8)) -> None:
         
         # Store which LED wavelengths are being used
         self.led_wavelengths = led_wavelengths
@@ -29,27 +18,69 @@ class SpectraGen:
         # Measured Values
         self.measurements = measurements
     
-    def add_reference_values(self, ref: np.ndarray):
+    def add_reference_values(self, ref: np.ndarray) -> None:
         
         # Reference values to normalize data
         self.ref_values = ref
 
-    def add_calibration_values(self, cal: np.ndarray):
+    def add_calibration_values(self, cal: np.ndarray) -> None:
         
         # Calibration value - tracks LED scatter
         self.cal_values = cal
 
+    def add_measurements(self, mes: pd.DataFrame) -> None:
+
+        # Add measurements after the fact
+        self.measurements = mes
+
+    def add_led_wavelengths(self, leds: np.ndarray) -> None:
+        
+        # Add wavelengths of each LED used
+        self.led_wavelengths = leds
+
     def get_variances(self) -> np.ndarray:
-        pass
+        
+        # Variances are located in the second row
+        return self.measurements.to_numpy()[1]
 
     def get_ambient_noise(self) -> np.ndarray:
-        pass
+        
+        # Variances are located in the second row
+        return self.measurements.to_numpy()[2]
 
     def filtered_spectra(self) -> np.ndarray:
         
-        # Store processed values - copy initial values
-        df = copy.deepcopy(self.measurements)
+        # Subtract out noise 
+        denoised = self.subtract_noise(self.measurements)
+
+        # Remove calibration which is the LED scatter noise
+        spectra = denoised - self.cal_values
+
+        # Any negative values get mapped to zero
+        spectra[spectra < 0] = 0
+
+        self.raw_spectra = spectra
+        return spectra
 
     def normalize(self):
-        pass
+       
+        # apply min/max normalization to spectra
+        min_val = min(self.ref_values)
+        max_val = max(self.ref_values)
+
+        normalized_spectra = (self.raw_spectra - min_val) / (max_val - min_val)
+
+        self.normalized_spectra = normalized_spectra
+        return normalized_spectra
+
+    def subtract_noise(self, df: pd.DataFrame) -> np.ndarray: 
+
+        new_df = df.drop(['units'], axis=1)
+        new_df = new_df.to_numpy()
+
+        # Subtract out noise
+        signal = new_df[0] - new_df[2]
+        signal[signal < 0] = 0 # Any negative values from the subtraction get mapped to zero
+
+        return signal
 
