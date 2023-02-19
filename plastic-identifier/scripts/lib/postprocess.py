@@ -38,15 +38,20 @@ class SpectraGen:
         # Add wavelengths of each LED used
         self.led_wavelengths = leds
 
+    def get_values(self) -> np.ndarray:
+        
+        # Variances are located in the second row
+        return self.measurements.to_numpy()[0][1:]
+
     def get_variances(self) -> np.ndarray:
         
         # Variances are located in the second row
-        return self.measurements.to_numpy()[1]
+        return self.measurements.to_numpy()[1][1:]
 
     def get_ambient_noise(self) -> np.ndarray:
         
         # Variances are located in the second row
-        return self.measurements.to_numpy()[2]
+        return self.measurements.to_numpy()[2][1:]
 
     def filtered_spectra(self) -> np.ndarray:
         
@@ -65,7 +70,7 @@ class SpectraGen:
     def normalize(self):
        
         # apply min/max normalization to spectra
-        min_val = min(self.ref_values)
+        min_val = 0 # min(self.ref_values)
         max_val = max(self.ref_values)
 
         normalized_spectra = (self.raw_spectra - min_val) / (max_val - min_val)

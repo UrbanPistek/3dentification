@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# Internal 
+from lib.postprocess import SpectraGen
+
 # wavelengths
 xs = [855, 940, 1050, 1200, 1300, 1450, 1550, 1650]
 
@@ -349,6 +352,132 @@ def plot6(save=False):
     else:
         plt.show()
 
+def plot7(save=False):
+    """
+    Compare different plastic types
+    """
+
+    # led config
+    leds = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
+
+    Spectra = SpectraGen(led_wavelengths=leds)
+
+    # Read data
+    df_ref = pd.read_csv("./data/bv1_reference_al_block.csv")
+    df_cali = pd.read_csv("./data/bv1_open_calibration.csv")
+
+    # ref = Spectra.subtract_noise(df=df_ref)
+    # cali = Spectra.subtract_noise(df=df_cali)
+
+    df1 = pd.read_csv("./data/bv1_plastic_type_2_white.csv")
+    df2 = pd.read_csv("./data/bv1_plastic_type_5_white.csv")
+    df3 = pd.read_csv("./data/bv1_plastic_type_6_white.csv")
+    df4 = pd.read_csv("./data/bv1_pla_white.csv")
+    df5 = pd.read_csv("./data/bv1_abs_white.csv")
+
+    fig1, (ax1) = plt.subplots(1, 1, gridspec_kw={'height_ratios': [1]}, figsize=(12,7), sharex=True)
+
+    # Overall Plot
+    ax1.set_title(f"Comparing Plastic Types")
+
+    labels = ['Type2 (HDPE)', 'Type5 (PP)', 'Type6 (PS)', 'Type7 (PLA)', 'Type7 (ABS)', 'Reference', 'Calibration']
+    colors = ['r', 'b', 'g', 'y', 'm', 'c', 'k']
+
+    dfs = [df1, df2, df3, df4, df5, df_ref, df_cali]
+    for i, df in enumerate(dfs):
+        df.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        Spectra.add_measurements(df)
+        ys = Spectra.get_values()
+        
+        # zip the two lists together
+        zipped = list(zip(leds, ys))
+
+        # sort the list of tuples based on the values in the first list
+        sorted_zipped = sorted(zipped, key=lambda x: x[0])
+
+        # unzip the sorted list of tuples back into separate lists
+        xs, ys = zip(*sorted_zipped)
+
+        ax1.plot(xs, ys, c=colors[i], label=labels[i])
+
+    ax1.set_ylabel("Intensity")
+    ax1.set_xlabel("Wavelength (nm)")
+    ax1.legend()
+
+    # save plot and results
+    if save:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        # save plot
+        filename = f"bv1_plastics_white"
+        plt.savefig(f'figures/{filename}.png')
+    else:
+        plt.show()
+
+def plot8(save=False):
+    """
+    Compare different plastic types
+    """
+
+    # led config
+    leds = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
+
+    Spectra = SpectraGen(led_wavelengths=leds)
+
+    # Read data
+    df_ref = pd.read_csv("./data/bv1_plastic_type_2_white.csv")
+    df_cali = pd.read_csv("./data/bv1_open_calibration.csv")
+    df_ref.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+    df_cali.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+
+    ref = Spectra.subtract_noise(df=df_ref)
+    cali = Spectra.subtract_noise(df=df_cali)
+    Spectra.add_calibration_values(cali)
+    Spectra.add_reference_values(ref)
+
+    df1 = pd.read_csv("./data/bv1_pla_white.csv")
+    df2 = pd.read_csv("./data/bv1_abs_white.csv")
+
+    fig1, (ax1) = plt.subplots(1, 1, gridspec_kw={'height_ratios': [1]}, figsize=(12,7), sharex=True)
+
+    # Overall Plot
+    leds_ordered = sorted(leds)
+    ax1.set_title(f"PLA vs ABS White, Leds: {leds_ordered}")
+
+    labels = ['pla', 'abs']
+    colors = ['c', 'm']
+
+    dfs = [df1, df2]
+    for i, df in enumerate(dfs):
+        df.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        Spectra.add_measurements(df)
+        Spectra.filtered_spectra()
+        ys = Spectra.normalize()
+
+        # zip & sort for nice plot
+        zipped = list(zip(leds, ys))
+        sorted_zipped = sorted(zipped, key=lambda x: x[0])
+        xs, ys = zip(*sorted_zipped)
+
+        ax1.set_ylim(0, 1) # Relative intensity is bound [0,1]
+        ax1.plot(xs, ys, c=colors[i], label=labels[i], marker='x', ms=7)
+
+    ax1.set_ylabel("Relative Intensity")
+    ax1.set_xlabel("Wavelength (nm)")
+    ax1.legend()
+
+    # save plot and results
+    if save:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        # save plot
+        filename = f"bv1_pla_v_abs_white"
+        plt.savefig(f'figures/{filename}.png')
+    else:
+        plt.show()
+
 def main():
     print("Generating Plots...")
 
@@ -357,7 +486,9 @@ def main():
     # plot3(save=True)
     # plot4(save=True)
     # plot5(save=True)
-    plot6(save=True)
+    # plot6(save=True)
+    plot7(save=True)
+    plot8(save=True)
 
 if __name__ == "__main__":
     main()
