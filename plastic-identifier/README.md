@@ -6,6 +6,12 @@ Using NIR Spectroscopy to identify plastics.
 Communicate with arduino over serial: 
 [PySerial](https://pyserial.readthedocs.io/en/latest/pyserial_api.html#serial.Serial.read)
 
+# Add venv to JupyterLab
+
+```
+python -m ipykernel install --user --name=venv
+```
+
 # Protobuf 
 
 ### Install on Linux

@@ -4,3 +4,11 @@ __pycache__
 .pio
 *.csv
 *.png
+.ipynb_checkpoints
+
+# Keep specific plots
+!plastic-identifier/scripts/figures/bv1_pla_v_abs_white.png
+!plastic-identifier/scripts/figures/bv1_plastics_white.png
+!plastic-identifier/scripts/figures/bv1_pla_v_abs_colour_ranges.png
+
+# Keep specific data
