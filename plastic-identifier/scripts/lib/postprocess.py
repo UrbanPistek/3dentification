@@ -88,4 +88,12 @@ class SpectraGen:
         signal[signal < 0] = 0 # Any negative values from the subtraction get mapped to zero
 
         return signal
-
+    
+    def display(self) -> None:
+        """
+        Displays the current object configuration
+        """
+        print(f"\nLeds:\n{self.led_wavelengths}")
+        print(f"\nReference Values:\n{self.ref_values}")
+        print(f"\nCalibration Values:\n{self.cal_values}")
+        print(f"\nMeasurements:\n{self.measurements}")
