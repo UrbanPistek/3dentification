@@ -478,6 +478,148 @@ def plot8(save=False):
     else:
         plt.show()
 
+def plot9(save=False):
+    """
+    Compare different plastic types
+    """
+
+    # led config
+    leds = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
+
+    Spectra = SpectraGen(led_wavelengths=leds)
+
+    # Read data
+    df_ref = pd.read_csv("./data/bv1_plastic_type_2_white.csv")
+    df_cali = pd.read_csv("./data/bv1_open_calibration.csv")
+    df_ref.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+    df_cali.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+
+    ref = Spectra.subtract_noise(df=df_ref)
+    cali = Spectra.subtract_noise(df=df_cali)
+    Spectra.add_calibration_values(cali)
+    Spectra.add_reference_values(ref)
+
+    df1 = pd.read_csv("./data/bv1_pla_white.csv")
+    df2 = pd.read_csv("./data/bv1_abs_white.csv")
+    df3 = pd.read_csv("./data/bv1_pla_black.csv")
+    df4 = pd.read_csv("./data/bv1_abs_black.csv")
+    
+    # lime green is approx middle of spectrum
+    df5 = pd.read_csv("./data/bv1_pla_lime.csv")
+    df6 = pd.read_csv("./data/bv1_abs_lime.csv")
+
+    fig1, (ax1) = plt.subplots(1, 1, gridspec_kw={'height_ratios': [1]}, figsize=(12,7), sharex=True)
+
+    # Overall Plot
+    leds_ordered = sorted(leds)
+    ax1.set_title(f"PLA vs ABS Colour Range, Leds: {leds_ordered}")
+
+    labels = ['pla_white', 'abs_white', 'pla_black', 'abs_black', 'pla_lime', 'abs_lime']
+    colors = ['k', 'r', 'k', 'r', 'k', 'r']
+    linestyles = ['--', '-.', '--', '-.', '-', ':']
+    markers = ['x', 'x', '>', '>', 'o', 'o']
+
+    dfs = [df1, df2, df3, df4, df5, df6]
+    for i, df in enumerate(dfs):
+        df.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        Spectra.add_measurements(df)
+        ys = Spectra.filtered_spectra()
+        # ys = Spectra.normalize()
+
+        # zip & sort for nice plot
+        zipped = list(zip(leds, ys))
+        sorted_zipped = sorted(zipped, key=lambda x: x[0])
+        xs, ys = zip(*sorted_zipped)
+
+        ax1.set_ylim(0, 0.6) # Relative intensity is bound [0,1]
+        ax1.plot(xs, ys, c=colors[i], label=labels[i], ls=linestyles[i], marker=markers[i], ms=7)
+
+    ax1.set_ylabel("Intensity")
+    ax1.set_xlabel("Wavelength (nm)")
+    ax1.legend()
+
+    # save plot and results
+    if save:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        # save plot
+        filename = f"bv1_pla_v_abs_colour_ranges"
+        plt.savefig(f'figures/{filename}.png')
+    else:
+        plt.show()
+
+def plot10(save=False):
+    """
+    Compare different plastic types
+    """
+
+    # led config
+    leds = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
+
+    Spectra = SpectraGen(led_wavelengths=leds)
+
+    # Read data
+    df_ref = pd.read_csv("./data/bv1_reference_compiled.csv")
+    df_cali = pd.read_csv("./data/bv1_open_calibration.csv")
+    df_ref.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+    df_cali.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+
+    ref = Spectra.subtract_noise(df=df_ref)
+    cali = Spectra.subtract_noise(df=df_cali)
+    Spectra.add_calibration_values(cali)
+    Spectra.add_reference_values(ref)
+
+    df1 = pd.read_csv("./data/bv1_pla_white.csv")
+    df2 = pd.read_csv("./data/bv1_abs_white.csv")
+    df3 = pd.read_csv("./data/bv1_pla_black.csv")
+    df4 = pd.read_csv("./data/bv1_abs_black.csv")
+    
+    # lime green is approx middle of spectrum
+    df5 = pd.read_csv("./data/bv1_pla_lime.csv")
+    df6 = pd.read_csv("./data/bv1_abs_lime.csv")
+
+    fig1, (ax1) = plt.subplots(1, 1, gridspec_kw={'height_ratios': [1]}, figsize=(12,7), sharex=True)
+
+    # Overall Plot
+    leds_ordered = sorted(leds)
+    ax1.set_title(f"PLA vs ABS Colour Range, Normalized, Leds: {leds_ordered}")
+
+    labels = ['pla_white', 'abs_white', 'pla_black', 'abs_black', 'pla_lime', 'abs_lime']
+    colors = ['k', 'r', 'k', 'r', 'k', 'r']
+    linestyles = ['--', '-.', '--', '-.', '-', ':']
+    markers = ['x', 'x', '>', '>', 'o', 'o']
+
+    dfs = [df1, df2, df3, df4, df5, df6]
+    for i, df in enumerate(dfs):
+        df.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        Spectra.add_measurements(df)
+        Spectra.filtered_spectra()
+        ys = Spectra.normalize()
+
+        # zip & sort for nice plot
+        zipped = list(zip(leds, ys))
+        sorted_zipped = sorted(zipped, key=lambda x: x[0])
+        xs, ys = zip(*sorted_zipped)
+
+        ax1.set_ylim(0, 1) # Relative intensity is bound [0,1]
+        ax1.plot(xs, ys, c=colors[i], label=labels[i], ls=linestyles[i], marker=markers[i], ms=7)
+
+    ax1.set_ylabel("Relative Intensity")
+    ax1.set_xlabel("Wavelength (nm)")
+    ax1.legend()
+
+    # save plot and results
+    if save:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        # save plot
+        filename = f"bv1_pla_v_abs_colour_ranges_normalized"
+        plt.savefig(f'figures/{filename}.png')
+    else:
+        plt.show()
+    
 def main():
     print("Generating Plots...")
 
@@ -487,8 +629,12 @@ def main():
     # plot4(save=True)
     # plot5(save=True)
     # plot6(save=True)
-    plot7(save=True)
-    plot8(save=True)
+
+    # Using new data format and boards
+    # plot7(save=True)
+    # plot8(save=True)
+    # plot9(save=True)
+    plot10(save=True)
 
 if __name__ == "__main__":
     main()

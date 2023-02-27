@@ -4,12 +4,16 @@ import serial
 import time
 import json
 import pandas as pd
+import numpy as np
 
 from lib.utils import get_serial_ports
 from utils.read_serial import write_read
 
+# Configure prints
+np.set_printoptions(precision=9, suppress=True)
+
 # Specify file to save data to
-FILENAME = 'boardv1_white_abs.csv'
+FILENAME = 'temp.csv'
 
 def main():
 
@@ -68,6 +72,7 @@ def main():
     
     te = time.time()
     print(f"\nElapsed time: {te - ts}s")
+    print(f"data saved to: {FILENAME}")
 
 if __name__ == "__main__":
     main()
