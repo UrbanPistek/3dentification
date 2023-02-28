@@ -43,8 +43,8 @@ def gen_datasets(Spectra: SpectraGen) -> np.ndarray:
     
     # training dataset
     train_x, train_y = [], []
-    train_files_pla = glob.glob(TRAIN_DIR + "/pla/*.csv")
-    train_files_abs = glob.glob(TRAIN_DIR + "/abs/*.csv")
+    train_files_pla = glob.glob(TRAIN_DIR + "/pla/**/*.csv")
+    train_files_abs = glob.glob(TRAIN_DIR + "/abs/**/*.csv")
     
     test_x, test_y = [], []
     test_files_pla = glob.glob(VAL_DIR + "/pla/*.csv")
