@@ -5,6 +5,7 @@ __pycache__
 *.csv
 *.png
 .ipynb_checkpoints
+plastic-identifier/scripts/data
 
 # Keep specific plots
 !plastic-identifier/scripts/figures/bv1_pla_v_abs_white.png

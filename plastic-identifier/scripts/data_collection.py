@@ -3,10 +3,12 @@ import sys
 import serial
 import time
 import json
+import traceback
 import argparse
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+from datetime import datetime
 
 from lib.utils import get_serial_ports
 from utils.read_serial import write_read
@@ -15,8 +17,10 @@ from utils.read_serial import write_read
 np.set_printoptions(precision=9, suppress=True)
 
 # Specify file to save data to
-FILENAME = 'bv1_pla_dark_pink'
-DATA_DIR = './data/train/pla/batch'
+CALIBRATION_ID = 1
+BOARD_VERSION = 1
+FILENAME = F'bv{BOARD_VERSION}_id{CALIBRATION_ID}_' + 'TEMP_abs_white'
+DATA_DIR = './data/dataset1/train/abs'
 BATCH_SIZE = 10
 
 def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_args:
@@ -33,7 +37,7 @@ def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_a
 
     return parser.parse_args()
 
-def get_data(verbose=True) -> None:
+def get_data(verbose=True, readings=1, batch=False) -> None:
 
     # Print out all availible ports
     ports = get_serial_ports()
@@ -47,62 +51,76 @@ def get_data(verbose=True) -> None:
 
     value = write_read(arduino, "ping")
     verbose and print(f"Ping:\n{value}")
-    data_dict = {
-        "led0": [],
-        "led1": [],
-        "led2": [],
-        "led3": [],
-        "led4": [],
-        "led5": [],
-        "led6": [],
-        "led7": [],
-    } 
 
     try:
-        data = write_read(arduino, "gen_spectra")
-        # print(f"Gen Spectra:\n{data}")   
+        for _ in tqdm(range(readings)):
 
-        if sys.getsizeof(data) > 33: # check against empty
+            data_dict = {
+                "led0": [],
+                "led1": [],
+                "led2": [],
+                "led3": [],
+                "led4": [],
+                "led5": [],
+                "led6": [],
+                "led7": [],
+            } 
 
-            # Decode byte object
-            data_decoded = data.decode('utf-8')
+            data = write_read(arduino, "gen_spectra")
+            print(f"Gen Spectra:\n{data}")   
 
-            # convert to dict
-            readings = json.loads(data_decoded)
+            if sys.getsizeof(data) > 33: # check against empty
 
-            for key in data_dict:
+                # Decode byte object
+                data_decoded = data.decode('utf-8')
 
-                data_dict[key].append(readings[key])
-                data_dict[key].append(readings[f"{key}_var"])
-                data_dict[key].append(readings[f"{key}_ambient"])
+                # convert to dict
+                readings = json.loads(data_decoded)
 
-    except:
+                for key in data_dict:
+
+                    data_dict[key].append(readings[key])
+                    data_dict[key].append(readings[f"{key}_var"])
+                    data_dict[key].append(readings[f"{key}_ambient"])
+
+                # Save data to file
+                save_data(data_dict, verbose=verbose, batch=batch)
+
+    except Exception:
         print("ERROR: read")
+        print(traceback.format_exc())
         return 
+    
+    te = time.time()
+    verbose and print(f"\nElapsed time: {te - ts}s")
+
+def save_data(data_dict, verbose=False, batch=False):
 
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
 
     df = pd.DataFrame.from_dict(data_dict)
     df.index = ['intensity', 'variance', 'ambient']
-    df.to_csv(f"{DATA_DIR}/{FILENAME}_{round(ts)}.csv")
+
+    datestamp = datetime.now().strftime('%Y/%m/%d').replace('/', '_').replace(' ', '_')
+    if batch:
+        ts = time.time()
+        datestamp = datestamp + '_' + str(round(ts))
+
+    df.to_csv(f"{DATA_DIR}/{FILENAME}_{datestamp}.csv")
     verbose and print(df.head())
-    
-    te = time.time()
-    verbose and print(f"\nElapsed time: {te - ts}s")
-    verbose and print(f"data saved to: {DATA_DIR}/{FILENAME}_{round(ts)}.csv")
+    verbose and print(f"data saved to: {DATA_DIR}/{FILENAME}_{datestamp}.csv")
 
 def main():
     
     parser = argparse.ArgumentParser()
     args = get_args(parser)
-    print(f"=> collecting data for: {FILENAME}")
+    print(f"=> collecting data in {DATA_DIR} , for: {FILENAME}")
 
     if args.single:
         get_data()
     elif args.batch:
-        for _ in tqdm(range(BATCH_SIZE)):
-            get_data(verbose=False)
+        get_data(verbose=True, readings=BATCH_SIZE, batch=True)
     else:
         parser.print_usage()
         parser.print_help()
