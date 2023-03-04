@@ -9,6 +9,8 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from datetime import datetime
+import concurrent
+from concurrent.futures import ThreadPoolExecutor
 
 from lib.utils import get_serial_ports
 from utils.read_serial import write_read
@@ -53,38 +55,16 @@ def get_data(verbose=True, readings=1, batch=False) -> None:
     verbose and print(f"Ping:\n{value}")
 
     try:
-        for _ in tqdm(range(readings)):
+        with ThreadPoolExecutor(max_workers=readings) as executor:
+            
+            for _ in tqdm(range(readings)):
 
-            data_dict = {
-                "led0": [],
-                "led1": [],
-                "led2": [],
-                "led3": [],
-                "led4": [],
-                "led5": [],
-                "led6": [],
-                "led7": [],
-            } 
+                data = write_read(arduino, "gen_spectra")
 
-            data = write_read(arduino, "gen_spectra")
-            print(f"Gen Spectra:\n{data}")   
+                if sys.getsizeof(data) > 33: # check against empty
 
-            if sys.getsizeof(data) > 33: # check against empty
-
-                # Decode byte object
-                data_decoded = data.decode('utf-8')
-
-                # convert to dict
-                readings = json.loads(data_decoded)
-
-                for key in data_dict:
-
-                    data_dict[key].append(readings[key])
-                    data_dict[key].append(readings[f"{key}_var"])
-                    data_dict[key].append(readings[f"{key}_ambient"])
-
-                # Save data to file
-                save_data(data_dict, verbose=verbose, batch=batch)
+                    # Save data to file
+                    executor.submit(save_data, data, verbose, batch)
 
     except Exception:
         print("ERROR: read")
@@ -92,9 +72,32 @@ def get_data(verbose=True, readings=1, batch=False) -> None:
         return 
     
     te = time.time()
-    verbose and print(f"\nElapsed time: {te - ts}s")
+    print(f"\nElapsed time: {te - ts}s")
 
-def save_data(data_dict, verbose=False, batch=False):
+def save_data(data, verbose=False, batch=False):
+
+    data_dict = {
+        "led0": [],
+        "led1": [],
+        "led2": [],
+        "led3": [],
+        "led4": [],
+        "led5": [],
+        "led6": [],
+        "led7": [],
+    } 
+
+    # Decode byte object
+    data_decoded = data.decode('utf-8')
+
+    # convert to dict
+    readings = json.loads(data_decoded)
+
+    for key in data_dict:
+
+        data_dict[key].append(readings[key])
+        data_dict[key].append(readings[f"{key}_var"])
+        data_dict[key].append(readings[f"{key}_ambient"])
 
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
@@ -120,7 +123,7 @@ def main():
     if args.single:
         get_data()
     elif args.batch:
-        get_data(verbose=True, readings=BATCH_SIZE, batch=True)
+        get_data(verbose=False, readings=BATCH_SIZE, batch=True)
     else:
         parser.print_usage()
         parser.print_help()
