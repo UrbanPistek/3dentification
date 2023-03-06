@@ -4,17 +4,27 @@ import sys
 import time
 import json
 import glob
+import argparse
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Models
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
 # Configure prints
 np.set_printoptions(precision=7, suppress=True)
+
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 # Internal modules
 from lib.postprocess import SpectraGen
@@ -34,11 +44,36 @@ CALIBRATION_FILES = [
 # Directories for each category
 # LABEL_DIRS = ["/abs", "/pla", "/empty", "/other"]
 # LABELS = [0, 1, 2, 3]
+# LABEL_NAMES = ["abs", "pla", "empty", "other"]
+
+# LABEL_DIRS = ["/abs", "/pla", "/empty"]
+# LABELS = [0, 1, 2]
+# LABEL_NAMES = ["abs", "pla", "empty"]
+
+# LABEL_DIRS = ["/abs", "/pla", "/other"]
+# LABELS = [0, 1, 2]
+# LABEL_NAMES = ["abs", "pla", "other"]
+
 LABEL_DIRS = ["/abs", "/pla"]
 LABELS = [0, 1]
+LABEL_NAMES = ["abs", "pla"]
 
 # For regex
 CALI_ID_REGEX =  r"_id(\d+)_"
+
+def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_args:
+    parser.add_argument(
+        "-v",
+        "--verbose", 
+        action='store_true',
+        help='Run training in verbose, showing confusion matrices and outputs')
+    parser.add_argument(
+        "-s",
+        "--save", 
+        action='store_true',
+        help='Save model')
+
+    return parser.parse_args()
 
 def init_spectra_cal_ref(S: SpectraGen, calibration_file: str) -> None:
 
@@ -95,6 +130,9 @@ def gen_datasets(Spectra: SpectraGen) -> np.ndarray:
 
 def main():
     print("Spectra Classifier Training...")
+    print(f"Training for: {LABEL_NAMES}")
+    parser = argparse.ArgumentParser()
+    args = get_args(parser)
     
     # Spectra generation object
     Spectra = SpectraGen(led_wavelengths=LEDS)
@@ -106,12 +144,22 @@ def main():
     "Decision Tree",
     "Random Forest",
     "AdaBoost",
+    "Nearest Neighbors",
+    "Linear SVM",
+    "RBF SVM",
+    "MLP Classifier",
+    "QDA",
     ]
 
     classifiers = [
         DecisionTreeClassifier(max_depth=250),
         RandomForestClassifier(max_depth=250, n_estimators=50, max_features=8),
         AdaBoostClassifier(),
+        KNeighborsClassifier(len(LABEL_DIRS)),
+        SVC(kernel="linear", C=0.025),
+        SVC(gamma=2, C=1),
+        MLPClassifier(alpha=1, max_iter=10000),
+        QuadraticDiscriminantAnalysis(),
     ]
 
     for name, clf in zip(names, classifiers):
@@ -119,6 +167,11 @@ def main():
         clf = make_pipeline(StandardScaler(), clf)
         clf.fit(train_x, train_y)
         score = clf.score(test_x, test_y)
+
+        # Display confusion Matrix
+        if args.verbose:
+            ConfusionMatrixDisplay.from_estimator(clf, test_x, test_y, display_labels=LABEL_NAMES)
+            plt.show()
 
         print(f"CLF: {name}\n Score: {score}")
 

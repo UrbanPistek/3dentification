@@ -6,6 +6,7 @@ __pycache__
 *.png
 .ipynb_checkpoints
 plastic-identifier/scripts/data
+plastic-identifier/scripts/models
 
 # Keep specific plots
 !plastic-identifier/scripts/figures/bv1_pla_v_abs_white.png
@@ -13,3 +14,5 @@ plastic-identifier/scripts/data
 !plastic-identifier/scripts/figures/bv1_pla_v_abs_colour_ranges.png
 
 # Keep specific data
+
+# Keep specific model
