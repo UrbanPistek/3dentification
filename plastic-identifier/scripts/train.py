@@ -47,13 +47,13 @@ CALIBRATION_FILES = [
 ]
 
 # Directories for each category
-# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other"]
-# LABELS = [0, 1, 2, 3]
-# LABEL_NAMES = ["abs", "pla", "empty", "other"]
+LABEL_DIRS = ["/abs", "/pla", "/empty", "/other"]
+LABELS = [0, 1, 2, 3]
+LABEL_NAMES = ["abs", "pla", "empty", "other"]
 
-LABEL_DIRS = ["/abs", "/pla", "/empty"]
-LABELS = [0, 1, 2]
-LABEL_NAMES = ["abs", "pla", "empty"]
+# LABEL_DIRS = ["/abs", "/pla", "/empty"]
+# LABELS = [0, 1, 2]
+# LABEL_NAMES = ["abs", "pla", "empty"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/other"]
 # LABELS = [0, 1, 2]
@@ -100,7 +100,7 @@ def init_spectra_cal_ref(S: SpectraGen, calibration_file: str) -> None:
     cali = S.subtract_noise(df=df_cali)
     S.add_calibration_values(cali)
 
-def extract_data(x: list, y: list, S: SpectraGen, label: int, glob_files): 
+def extract_data(x: list, y: list, S: SpectraGen, label: int, glob_files, enable_ratios_vec=False) -> None: 
 
     for file in glob_files:
         df = pd.read_csv(file)
@@ -108,14 +108,19 @@ def extract_data(x: list, y: list, S: SpectraGen, label: int, glob_files):
         S.add_measurements(df)
         ys = S.filtered_spectra()
 
+        # Add ratios vector
+        if enable_ratios_vec:
+            ratios_vec = S.create_ratios_vector()
+            ys = np.concatenate((ys, ratios_vec), axis=0)
+
         x.append(ys)
         y.append(label)
 
-def merge_data(Spectra: SpectraGen, directory: str, label: int, calibrationId: int, x: list, y: list):
+def merge_data(Spectra: SpectraGen, directory: str, label: int, calibrationId: int, x: list, y: list) -> None:
 
     # Grab all files in the directory according to a specific calibration id
     files = glob.glob(directory + f"/**/*_id{calibrationId}_*.csv", recursive=True)
-    extract_data(x, y, Spectra, label, files)
+    extract_data(x, y, Spectra, label, files, enable_ratios_vec=False)
 
 def gen_datasets(Spectra: SpectraGen) -> np.ndarray:
     
@@ -143,7 +148,7 @@ def gen_datasets(Spectra: SpectraGen) -> np.ndarray:
 
     return np.array(train_x), np.array(train_y), np.array(test_x), np.array(test_y)
 
-def main():
+def main() -> None:
     print("Spectra Classifier Training...")
     parser = argparse.ArgumentParser()
     args = get_args(parser)

@@ -19,10 +19,10 @@ from utils.read_serial import write_read
 np.set_printoptions(precision=9, suppress=True)
 
 # Specify file to save data to
-CALIBRATION_ID = 3
+CALIBRATION_ID = 0
 BOARD_VERSION = 1
-FILENAME = f'bv{BOARD_VERSION}_id{CALIBRATION_ID}_' + 'metallic_surface'
-DATA_DIR = './data/dataset1/val/other/non_plastics'
+FILENAME = f'bv{BOARD_VERSION}_id{CALIBRATION_ID}_' + 'temp'
+DATA_DIR = './data/dataset1/'
 BATCH_SIZE = 10
 
 def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_args:
