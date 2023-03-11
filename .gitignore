@@ -1,4 +1,6 @@
 venv
+build
+target
 __pycache__
 .vscode
 .pio
