@@ -47,13 +47,13 @@ CALIBRATION_FILES = [
 ]
 
 # Directories for each category
-LABEL_DIRS = ["/abs", "/pla", "/empty", "/other"]
-LABELS = [0, 1, 2, 3]
-LABEL_NAMES = ["abs", "pla", "empty", "other"]
+# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other"]
+# LABELS = [0, 1, 2, 3]
+# LABEL_NAMES = ["abs", "pla", "empty", "other"]
 
-# LABEL_DIRS = ["/abs", "/pla", "/empty"]
-# LABELS = [0, 1, 2]
-# LABEL_NAMES = ["abs", "pla", "empty"]
+LABEL_DIRS = ["/abs", "/pla", "/empty"]
+LABELS = [0, 1, 2]
+LABEL_NAMES = ["abs", "pla", "empty"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/other"]
 # LABELS = [0, 1, 2]
@@ -205,8 +205,16 @@ def main() -> None:
 
             # Display confusion Matrix
             if args.verbose:
+                fig, ax = plt.subplots(figsize=(12,7))
                 ConfusionMatrixDisplay.from_estimator(clf, test_x, test_y, display_labels=LABEL_NAMES)
-                plt.show()
+                
+                ax.set_title(f"{name}: Confusion Matrix")
+                # save plot
+                if not os.path.exists('figures'):
+                    os.makedirs('figures')
+                m_name = name.replace(" ", "")
+                filename = f"cfm_{m_name}"
+                plt.savefig(f'figures/{filename}.png')
 
             print(f"CLF: {name}\n Score: {score}")
 
