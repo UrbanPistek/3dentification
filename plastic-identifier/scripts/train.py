@@ -4,6 +4,8 @@ import sys
 import time
 import json
 import glob
+import pickle
+import random
 import argparse
 import pandas as pd
 import numpy as np
@@ -19,6 +21,8 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+from sklearn.experimental import enable_halving_search_cv  # noqa
+from sklearn.model_selection import HalvingRandomSearchCV
 
 # Configure prints
 np.set_printoptions(precision=7, suppress=True)
@@ -39,6 +43,7 @@ VAL_DIR = DATA_DIR + "/val"
 CALIBRATION_FILES = [
     "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id1_daytime_calibration_2023_03_05.csv",
     "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id2_late_afternoon_calibration_2023_03_05.csv",
+    "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id3_daytime_calibration_2023_03_06.csv",
 ]
 
 # Directories for each category
@@ -46,17 +51,17 @@ CALIBRATION_FILES = [
 # LABELS = [0, 1, 2, 3]
 # LABEL_NAMES = ["abs", "pla", "empty", "other"]
 
-# LABEL_DIRS = ["/abs", "/pla", "/empty"]
-# LABELS = [0, 1, 2]
-# LABEL_NAMES = ["abs", "pla", "empty"]
+LABEL_DIRS = ["/abs", "/pla", "/empty"]
+LABELS = [0, 1, 2]
+LABEL_NAMES = ["abs", "pla", "empty"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/other"]
 # LABELS = [0, 1, 2]
 # LABEL_NAMES = ["abs", "pla", "other"]
 
-LABEL_DIRS = ["/abs", "/pla"]
-LABELS = [0, 1]
-LABEL_NAMES = ["abs", "pla"]
+# LABEL_DIRS = ["/abs", "/pla"]
+# LABELS = [0, 1]
+# LABEL_NAMES = ["abs", "pla"]
 
 # For regex
 CALI_ID_REGEX =  r"_id(\d+)_"
@@ -72,6 +77,16 @@ def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_a
         "--save", 
         action='store_true',
         help='Save model')
+    parser.add_argument(
+        "-o",
+        "--optimize", 
+        action='store_true',
+        help='Run optimization on a set of models')
+    parser.add_argument(
+        "-t",
+        "--train", 
+        action='store_true',
+        help='Train a set of models')
 
     return parser.parse_args()
 
@@ -130,7 +145,6 @@ def gen_datasets(Spectra: SpectraGen) -> np.ndarray:
 
 def main():
     print("Spectra Classifier Training...")
-    print(f"Training for: {LABEL_NAMES}")
     parser = argparse.ArgumentParser()
     args = get_args(parser)
     
@@ -140,40 +154,129 @@ def main():
     train_x, train_y, test_x, test_y = gen_datasets(Spectra)
     print(f"\ntrain_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
 
-    names = [
-    "Decision Tree",
-    "Random Forest",
-    "AdaBoost",
-    "Nearest Neighbors",
-    "Linear SVM",
-    "RBF SVM",
-    "MLP Classifier",
-    "QDA",
-    ]
+    # ===========================[ Training ]==============================
+    if args.train: 
+        print(f"Training for: {LABEL_NAMES}")
 
-    classifiers = [
-        DecisionTreeClassifier(max_depth=250),
-        RandomForestClassifier(max_depth=250, n_estimators=50, max_features=8),
-        AdaBoostClassifier(),
-        KNeighborsClassifier(len(LABEL_DIRS)),
-        SVC(kernel="linear", C=0.025),
-        SVC(gamma=2, C=1),
-        MLPClassifier(alpha=1, max_iter=10000),
-        QuadraticDiscriminantAnalysis(),
-    ]
+        names = [
+            "Decision Tree",
+            "Random Forest",
+            "AdaBoost",
+            "Nearest Neighbors",
+            "Linear SVM",
+            "RBF SVM",
+            "MLP Classifier",
+            "QDA",
+        ]
 
-    for name, clf in zip(names, classifiers):
+        classifiers = [
+            DecisionTreeClassifier(max_depth=250),
+            RandomForestClassifier(max_depth=250, n_estimators=50, max_features=8),
+            AdaBoostClassifier(),
+            KNeighborsClassifier(len(LABEL_DIRS)),
+            SVC(kernel="linear", C=0.025),
+            SVC(gamma=2, C=1),
+            MLPClassifier(alpha=1, max_iter=10000),
+            QuadraticDiscriminantAnalysis(),
+        ]
 
-        clf = make_pipeline(StandardScaler(), clf)
-        clf.fit(train_x, train_y)
-        score = clf.score(test_x, test_y)
+        for name, clf in zip(names, classifiers):
 
-        # Display confusion Matrix
-        if args.verbose:
-            ConfusionMatrixDisplay.from_estimator(clf, test_x, test_y, display_labels=LABEL_NAMES)
-            plt.show()
+            clf = make_pipeline(StandardScaler(), clf)
+            clf.fit(train_x, train_y)
+            score = clf.score(test_x, test_y)
 
-        print(f"CLF: {name}\n Score: {score}")
+            # save model
+            if args.save:
+                if not os.path.exists('models'):
+                    os.makedirs('models')
+
+                m_name = name.replace(" ", "")
+                score_str = str(round(score, 2) - int(round(score, 2)))[1:].replace(".", "")
+                filename = f"model_{m_name}_{score_str}"
+                with open(f'./models/{filename}.pickle', 'wb') as file:
+                    # Pickle the object and save it to the file
+                    pickle.dump(clf, file)
+
+            # Display confusion Matrix
+            if args.verbose:
+                ConfusionMatrixDisplay.from_estimator(clf, test_x, test_y, display_labels=LABEL_NAMES)
+                plt.show()
+
+            print(f"CLF: {name}\n Score: {score}")
+
+    # ===========================[ Optimization ]==============================
+    elif args.optimize:
+
+        names = [
+            "RBF SVM",
+            "MLP Classifier",
+        ]
+
+        classifiers = [
+            SVC(kernel='rbf'),
+            MLPClassifier(max_iter=10000),
+        ]
+
+        param_dist = [
+            {
+                "C": np.linspace(0.0001, 2, num=50), # random values from [0, 1]
+                "gamma": list(range(1, 10)),
+                "degree": list(range(2, 15)),
+            },
+            {
+                "hidden_layer_sizes": list(range(100, 1000, 100)),
+                "solver": ["lbfgs", "sgd", "adam"],
+                "alpha": np.linspace(0.0001, 2, num=25),
+                "learning_rate": ["constant", "invscaling", "adaptive"],
+            },
+        ]
+
+        print(f"Optimizing for: {names}")
+        
+        # Combine train and test
+        X = np.concatenate((train_x, test_x), axis=0)
+        y = np.concatenate((train_y, test_y), axis=0)
+        print(f"\nX: {X.shape}, y: {y.shape}")
+
+        for i, clf in enumerate(classifiers):
+
+            rsh = HalvingRandomSearchCV(
+                estimator=clf, param_distributions=param_dist[i], factor=2, verbose=1
+            )
+            rsh.fit(X, y)
+
+            # Plot results of search
+            results = pd.DataFrame(rsh.cv_results_)
+            results["params_str"] = results.params.apply(str)
+            results.drop_duplicates(subset=("params_str", "iter"), inplace=True)
+            mean_scores = results.pivot(
+                index="iter", columns="params_str", values="mean_test_score"
+            )
+            ax = mean_scores.plot(legend=False, alpha=0.8, figsize=(16,9))
+
+            labels = [
+                f"iter={i}\n" for i in range(rsh.n_iterations_)
+            ]
+
+            ax.set_xticks(range(rsh.n_iterations_))
+            ax.set_xticklabels(labels, multialignment="left")
+            ax.set_title(f"{names[i]}\nBest: {rsh.best_params_}\nScore: {rsh.best_score_}")
+            ax.set_ylabel("mean test score", fontsize=15)
+            ax.set_xlabel("iterations", fontsize=15)
+
+            # save plot
+            if not os.path.exists('figures'):
+                os.makedirs('figures')
+            m_name = names[i].replace(" ", "")
+            filename = f"optimize_{m_name}_random_halving_search"
+            plt.savefig(f'figures/{filename}.png')
+
+            print(f"\n=> {names[i]}\nBest: {rsh.best_params_}\nScore: {rsh.best_score_}\n")
+
+    else:
+        parser.print_usage()
+        parser.print_help()
 
 if __name__ == "__main__":
     main()
