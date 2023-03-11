@@ -3,8 +3,14 @@ import sys
 import serial
 import time
 import json
+import traceback
+import argparse
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
+from datetime import datetime
+import concurrent
+from concurrent.futures import ThreadPoolExecutor
 
 from lib.utils import get_serial_ports
 from utils.read_serial import write_read
@@ -13,14 +19,32 @@ from utils.read_serial import write_read
 np.set_printoptions(precision=9, suppress=True)
 
 # Specify file to save data to
-FILENAME = 'temp.csv'
+CALIBRATION_ID = 0
+BOARD_VERSION = 1
+FILENAME = f'bv{BOARD_VERSION}_id{CALIBRATION_ID}_' + 'temp'
+DATA_DIR = './data/dataset1/'
+BATCH_SIZE = 10
 
-def main():
+def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_args:
+    parser.add_argument(
+        "-s",
+        "--single", 
+        action='store_true',
+        help='Perform a single measurement')
+    parser.add_argument(
+        "-b",
+        "--batch", 
+        action='store_true',
+        help='Perform multiple measurements')
+
+    return parser.parse_args()
+
+def get_data(verbose=True, readings=1, batch=False) -> None:
 
     # Print out all availible ports
     ports = get_serial_ports()
-    print(f"Availible Ports: \n{ports}\n")
-    print(f"Reading from port: \n{ports[0]}\n")
+    verbose and print(f"Availible Ports: \n{ports}\n")
+    verbose and print(f"Reading from port: \n{ports[0]}\n")
 
     # Using long timeout to wait for scan data
     arduino = serial.Serial(port=ports[0], baudrate=115200, timeout=5)
@@ -28,7 +52,30 @@ def main():
     ts = time.time()
 
     value = write_read(arduino, "ping")
-    print(f"Ping:\n{value}")
+    verbose and print(f"Ping:\n{value}")
+
+    try:
+        with ThreadPoolExecutor(max_workers=readings) as executor:
+            
+            for _ in tqdm(range(readings)):
+
+                data = write_read(arduino, "gen_spectra")
+
+                if sys.getsizeof(data) > 33: # check against empty
+
+                    # Save data to file
+                    executor.submit(save_data, data, verbose, batch)
+
+    except Exception:
+        print("ERROR: read")
+        print(traceback.format_exc())
+        return 
+    
+    te = time.time()
+    print(f"\nElapsed time: {te - ts}s")
+
+def save_data(data, verbose=False, batch=False):
+
     data_dict = {
         "led0": [],
         "led1": [],
@@ -40,39 +87,46 @@ def main():
         "led7": [],
     } 
 
-    try:
-        data = write_read(arduino, "gen_spectra")
-        # print(f"Gen Spectra:\n{data}")   
+    # Decode byte object
+    data_decoded = data.decode('utf-8')
 
-        if sys.getsizeof(data) > 33: # check against empty
+    # convert to dict
+    readings = json.loads(data_decoded)
 
-            # Decode byte object
-            data_decoded = data.decode('utf-8')
+    for key in data_dict:
 
-            # convert to dict
-            readings = json.loads(data_decoded)
+        data_dict[key].append(readings[key])
+        data_dict[key].append(readings[f"{key}_var"])
+        data_dict[key].append(readings[f"{key}_ambient"])
 
-            for key in data_dict:
-
-                data_dict[key].append(readings[key])
-                data_dict[key].append(readings[f"{key}_var"])
-                data_dict[key].append(readings[f"{key}_ambient"])
-
-    except:
-        print("ERROR: read")
-        return 
-
-    if not os.path.exists('data'):
-        os.makedirs('data')
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR)
 
     df = pd.DataFrame.from_dict(data_dict)
     df.index = ['intensity', 'variance', 'ambient']
-    df.to_csv(f"./data/{FILENAME}")
-    print(df.head())
+
+    datestamp = datetime.now().strftime('%Y/%m/%d').replace('/', '_').replace(' ', '_')
+    if batch:
+        ts = time.time()
+        datestamp = datestamp + '_' + str(round(ts))
+
+    df.to_csv(f"{DATA_DIR}/{FILENAME}_{datestamp}.csv")
+    verbose and print(df.head())
+    verbose and print(f"data saved to: {DATA_DIR}/{FILENAME}_{datestamp}.csv")
+
+def main():
     
-    te = time.time()
-    print(f"\nElapsed time: {te - ts}s")
-    print(f"data saved to: {FILENAME}")
+    parser = argparse.ArgumentParser()
+    args = get_args(parser)
+    print(f"=> collecting data in {DATA_DIR} , for: {FILENAME}")
+
+    if args.single:
+        get_data()
+    elif args.batch:
+        get_data(verbose=False, readings=BATCH_SIZE, batch=True)
+    else:
+        parser.print_usage()
+        parser.print_help()
 
 if __name__ == "__main__":
     main()

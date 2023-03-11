@@ -66,6 +66,22 @@ class SpectraGen:
 
         self.raw_spectra = spectra
         return spectra
+    
+    def create_ratios_vector(self) -> np.ndarray:
+
+        dim = len(self.raw_spectra)
+        ratio_matrix = np.zeros((dim, dim))
+        for i in range(dim):
+            for j in range(dim):
+                if self.raw_spectra[j] == 0:
+                    ratio_matrix[i,j] = 0
+                else:
+                    ratio_matrix[i,j] = self.raw_spectra[i] / self.raw_spectra[j]
+
+        # Flatten the matrix into a 1D array using the ravel() method
+        ratio_vector = ratio_matrix.ravel()
+        self.ratio_vector = ratio_vector
+        return ratio_vector
 
     def normalize(self):
        
