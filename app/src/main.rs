@@ -4,7 +4,7 @@ mod serial_reader;
 use serial_reader::*;
 
 fn main() {
-    println!("DNIR Application...");
+    println!("\nDNIR Application...");
     
     read_serial();
 }
