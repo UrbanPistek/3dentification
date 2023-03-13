@@ -1,5 +1,6 @@
 import tkinter
 import random
+import pickle
 import tkinter.messagebox
 import customtkinter
 import pandas as pd
@@ -24,6 +25,15 @@ ax = fig.add_subplot(111)
 LEDS = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
 Spectra = SpectraGen(led_wavelengths=LEDS)
 
+MODEL = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model_MLPClassifier_94.pickle"
+clf = pickle.load(open(MODEL, "rb"))
+
+labels = {
+    "0": "abs",
+    "1": "pla",
+    "2": "empty",
+}
+
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
@@ -40,7 +50,7 @@ class App(customtkinter.CTk):
         # create sidebar frame with widgets
         self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
+        self.sidebar_frame.grid_rowconfigure(9, weight=1)
 
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="Controls", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
@@ -56,6 +66,10 @@ class App(customtkinter.CTk):
         # clear
         self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame, text="Clear", command=self.clear_plot)
         self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
+
+        # inference
+        self.sidebar_button_4 = customtkinter.CTkButton(self.sidebar_frame, text="Inference", command=self.inference)
+        self.sidebar_button_4.grid(row=4, column=0, padx=20, pady=10)
 
         # Utility features
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
@@ -100,6 +114,7 @@ class App(customtkinter.CTk):
 
         # Data processing configurations
         self.is_calibrated = False
+        self.is_scanned = False
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
@@ -116,6 +131,10 @@ class App(customtkinter.CTk):
             scan_df = get_scan()
             Spectra.add_measurements(scan_df)
             ys = Spectra.filtered_spectra()
+
+            # store
+            self.spectra_vals = ys
+            self.is_scanned = True
 
             # zip & sort for nice plot
             zipped = list(zip(LEDS, ys))
@@ -155,6 +174,21 @@ class App(customtkinter.CTk):
 
         # update
         self.is_calibrated = True
+
+    def inference(self):
+
+        if self.is_scanned:
+            
+            # fix dimensions for the model input
+            input = self.spectra_vals.reshape(1, -1)
+            res = clf.predict(input)
+
+            self.textbox.delete("0.0", "end")  # delete all text
+            self.textbox.insert("0.0", labels[str(res[0])])
+
+        else:
+            self.textbox.delete("0.0", "end")  # delete all text
+            self.textbox.insert("0.0", "Please scan...")
 
 if __name__ == "__main__":
     app = App()
