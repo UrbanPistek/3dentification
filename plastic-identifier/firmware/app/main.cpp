@@ -24,7 +24,7 @@
 
 // Settings for generating spectra
 #define EXPOSURE_TIME_MS 5
-#define SPECTRA_NUM_READINGS 25
+#define SPECTRA_NUM_READINGS 5
 
 // Map negative ADC values to be positive
 #define MAP_NEGATIVE_ADC_VALUES true
