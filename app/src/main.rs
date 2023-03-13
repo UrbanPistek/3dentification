@@ -1,10 +1,11 @@
 // serial module
-mod serial_reader;
+mod dnir_reader;
 
-use serial_reader::*;
+use dnir_reader::*;
 
 fn main() {
     println!("\nDNIR Application...");
     
-    read_serial();
+    let scan_json = get_scan_data().unwrap();
+    println!("Scan: \n{:#?}", scan_json);
 }
