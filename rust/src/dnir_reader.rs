@@ -59,10 +59,13 @@ pub fn get_scan_data() -> std::result::Result<SensorData, Box<dyn Error>> {
             if buffer.contains(&b'\n') {
                 let data_string = String::from_utf8_lossy(&buffer);
                 let null_index = data_string.find('\n').unwrap();
-
                 let data = &data_string[..null_index];
-
-                break;
+                
+                if data.contains("PlasticIdentifier is initialized!") {
+                    break;
+                } else {
+                    return Err("board failed to initialize".into());
+                }
 
             }
         }
