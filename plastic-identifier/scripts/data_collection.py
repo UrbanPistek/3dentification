@@ -9,7 +9,6 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from datetime import datetime
-import concurrent
 from concurrent.futures import ThreadPoolExecutor
 
 from lib.utils import get_serial_ports
@@ -73,6 +72,54 @@ def get_data(verbose=True, readings=1, batch=False) -> None:
     
     te = time.time()
     print(f"\nElapsed time: {te - ts}s")
+
+def get_scan() -> pd.DataFrame:
+
+    # Print out all availible ports
+    ports = get_serial_ports()
+
+    # Using long timeout to wait for scan data
+    arduino = serial.Serial(port=ports[0], baudrate=115200, timeout=5)
+    
+    # wake up serial
+    write_read(arduino, "ping")
+
+    try:
+        data = write_read(arduino, "gen_spectra")
+        if sys.getsizeof(data) > 33: # check against empty
+
+            data_dict = {
+                "led0": [],
+                "led1": [],
+                "led2": [],
+                "led3": [],
+                "led4": [],
+                "led5": [],
+                "led6": [],
+                "led7": [],
+            } 
+
+            # Decode byte object
+            data_decoded = data.decode('utf-8')
+
+            # convert to dict
+            readings = json.loads(data_decoded)
+
+            for key in data_dict:
+
+                data_dict[key].append(readings[key])
+                data_dict[key].append(readings[f"{key}_var"])
+                data_dict[key].append(readings[f"{key}_ambient"])
+
+            df = pd.DataFrame.from_dict(data_dict)
+            df.index = ['intensity', 'variance', 'ambient']
+
+            return df
+
+    except Exception:
+        print("ERROR: get scan")
+        print(traceback.format_exc())
+        return 
 
 def save_data(data, verbose=False, batch=False):
 
