@@ -111,8 +111,8 @@ def get_scan() -> pd.DataFrame:
                 data_dict[key].append(readings[f"{key}_var"])
                 data_dict[key].append(readings[f"{key}_ambient"])
 
+            data_dict["units"] = ['intensity', 'variance', 'ambient']
             df = pd.DataFrame.from_dict(data_dict)
-            df.index = ['intensity', 'variance', 'ambient']
 
             return df
 

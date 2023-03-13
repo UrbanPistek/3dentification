@@ -2,6 +2,8 @@ import tkinter
 import random
 import tkinter.messagebox
 import customtkinter
+import pandas as pd
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -96,6 +98,9 @@ class App(customtkinter.CTk):
         self.appearance_mode_optionemenu.set("Dark")
         self.scaling_optionemenu.set("100%")
 
+        # Data processing configurations
+        self.is_calibrated = False
+
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
 
@@ -104,17 +109,31 @@ class App(customtkinter.CTk):
         customtkinter.set_widget_scaling(new_scaling_float)
 
     def scan(self):
-        # Generate some random data to plot
-        x = [i for i in range(10)]
-        y = [random.randint(1, 10) for i in range(10)]
-        
-        # Clear the plot and plot the data
-        ax.clear()
-        ax.plot(x, y)
-        ax.set_xlabel('X Label')
-        ax.set_ylabel('Y Label')
-        ax.set_title('Data Plot')
-        self.canvas.draw()
+
+        if self.is_calibrated:
+
+            # Generate some random data to plot
+            scan_df = get_scan()
+            Spectra.add_measurements(scan_df)
+            ys = Spectra.filtered_spectra()
+
+            # zip & sort for nice plot
+            zipped = list(zip(LEDS, ys))
+            sorted_zipped = sorted(zipped, key=lambda x: x[0])
+            xs, ys = zip(*sorted_zipped)
+
+            # Clear the plot and plot the data
+            ax.clear()
+            ax.plot(xs, ys, label="Spectra", ls='--', marker='x', ms=7)
+            ax.set_xlabel('Wavelength (nm)')
+            ax.set_ylabel('Intensity')
+            ax.set_title('Scan')
+            ax.legend()
+            self.canvas.draw()
+
+        else:
+            self.textbox.delete("0.0", "end")  # delete all text
+            self.textbox.insert("0.0", "Please calibrate...")
 
     # Define the clear function
     def clear_plot(self):
@@ -124,8 +143,18 @@ class App(customtkinter.CTk):
 
     # Define the get function
     def calibrate(self):
-        # Retrieve the data from the plot
-        pass
+
+        calibration_df = get_scan()
+        
+        # Remove noise and add calibration
+        cali = Spectra.subtract_noise(df=calibration_df)
+        Spectra.add_calibration_values(cali)
+
+        self.textbox.delete("0.0", "end")  # delete all text
+        self.textbox.insert("0.0", str(calibration_df))
+
+        # update
+        self.is_calibrated = True
 
 if __name__ == "__main__":
     app = App()
