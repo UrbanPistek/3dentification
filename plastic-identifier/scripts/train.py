@@ -16,13 +16,15 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import ConfusionMatrixDisplay
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import LinearSVC
+from sklearn.ensemble import *
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.experimental import enable_halving_search_cv  # noqa
-from sklearn.model_selection import HalvingRandomSearchCV
+from sklearn.model_selection import HalvingRandomSearchCV, HalvingGridSearchCV
 
 # Configure prints
 np.set_printoptions(precision=7, suppress=True)
@@ -44,16 +46,45 @@ CALIBRATION_FILES = [
     "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id1_daytime_calibration_2023_03_05.csv",
     "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id2_late_afternoon_calibration_2023_03_05.csv",
     "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id3_daytime_calibration_2023_03_06.csv",
+    "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id4_late_afternoon_calibration_2023_03_15.csv",
 ]
 
 # Directories for each category
+LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/non_plastics", "/other/petg", "/other/plastics"] 
+LABELS = [0, 1, 2, 3, 4, 5]
+LABEL_NAMES = ["abs", "pla", "empty", "non_plastics", "petg", "plastics"]
+
+# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/non_plastics", "/other/plastics"] 
+# LABELS = [0, 1, 2, 3, 4]
+# LABEL_NAMES = ["abs", "pla", "empty", "non_plastics", "plastics"]
+
+# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/petg", "/other/plastics"] 
+# LABELS = [0, 1, 2, 3, 4]
+# LABEL_NAMES = ["abs", "pla", "empty", "petg", "plastics"]
+
+# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/petg", "/other/non_plastics"] 
+# LABELS = [0, 1, 2, 3, 4]
+# LABEL_NAMES = ["abs", "pla", "empty", "petg", "non_plastics"]
+
+# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/plastics"] 
+# LABELS = [0, 1, 2, 3]
+# LABEL_NAMES = ["abs", "pla", "empty", "plastics"]
+
+# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/non_plastics"] 
+# LABELS = [0, 1, 2, 3]
+# LABEL_NAMES = ["abs", "pla", "empty", "non_plastics"]
+
+# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/petg"] 
+# LABELS = [0, 1, 2, 3]
+# LABEL_NAMES = ["abs", "pla", "empty", "petg"]
+
 # LABEL_DIRS = ["/abs", "/pla", "/empty", "/other"]
 # LABELS = [0, 1, 2, 3]
 # LABEL_NAMES = ["abs", "pla", "empty", "other"]
 
-LABEL_DIRS = ["/abs", "/pla", "/empty"]
-LABELS = [0, 1, 2]
-LABEL_NAMES = ["abs", "pla", "empty"]
+# LABEL_DIRS = ["/abs", "/pla", "/empty"]
+# LABELS = [0, 1, 2]
+# LABEL_NAMES = ["abs", "pla", "empty"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/other"]
 # LABELS = [0, 1, 2]
@@ -120,7 +151,7 @@ def merge_data(Spectra: SpectraGen, directory: str, label: int, calibrationId: i
 
     # Grab all files in the directory according to a specific calibration id
     files = glob.glob(directory + f"/**/*_id{calibrationId}_*.csv", recursive=True)
-    extract_data(x, y, Spectra, label, files, enable_ratios_vec=False)
+    extract_data(x, y, Spectra, label, files, enable_ratios_vec=True)
 
 def gen_datasets(Spectra: SpectraGen) -> np.ndarray:
     
@@ -166,8 +197,13 @@ def main() -> None:
         names = [
             "Decision Tree",
             "Random Forest",
+            "Bagging Classifier",
+            "Extra Trees Classifier",
+            "Gradient Boosting Classifier",
+            "Voting Classifier",
+            "Histogram Gradient Boosting Classifier",
             "AdaBoost",
-            "Nearest Neighbors",
+            "K Nearest Neighbors",
             "Linear SVM",
             "RBF SVM",
             "MLP Classifier",
@@ -175,10 +211,23 @@ def main() -> None:
         ]
 
         classifiers = [
-            DecisionTreeClassifier(max_depth=250),
-            RandomForestClassifier(max_depth=250, n_estimators=50, max_features=8),
+            DecisionTreeClassifier(max_depth=25),
+            RandomForestClassifier(max_depth=25, n_estimators=25, max_features=8),
+            BaggingClassifier(estimator=SVC(),n_estimators=10, random_state=0),
+            ExtraTreesClassifier(n_estimators=25, random_state=0),
+            GradientBoostingClassifier(n_estimators=25, learning_rate=1.0, max_depth=1, random_state=0),
+            VotingClassifier(estimators=[
+                ('dt', DecisionTreeClassifier(max_depth=25)),
+                ('rf', RandomForestClassifier(max_depth=25, n_estimators=25, max_features=8)), 
+                ('bag', BaggingClassifier(estimator=SVC(),n_estimators=10, random_state=0)),
+                ('knn', KNeighborsClassifier(len(LABEL_DIRS))), 
+                ('mlp', MLPClassifier(alpha=1, max_iter=10000)),
+                ('ada', AdaBoostClassifier()),
+                ('hgb', HistGradientBoostingClassifier()),
+                ], voting='hard'),
+            HistGradientBoostingClassifier(),
             AdaBoostClassifier(),
-            KNeighborsClassifier(len(LABEL_DIRS)),
+            KNeighborsClassifier(n_neighbors=len(LABEL_DIRS)),
             SVC(kernel="linear", C=0.025),
             SVC(gamma=2, C=1),
             MLPClassifier(alpha=1, max_iter=10000),
@@ -193,13 +242,14 @@ def main() -> None:
 
             # save model
             if args.save:
-                if not os.path.exists('models'):
-                    os.makedirs('models')
+                if not os.path.exists('temp'):
+                    os.makedirs('temp')
 
                 m_name = name.replace(" ", "")
-                score_str = str(round(score, 2) - int(round(score, 2)))[1:].replace(".", "")
-                filename = f"model_{m_name}_{score_str}"
-                with open(f'./models/{filename}.pickle', 'wb') as file:
+                score_str = str(round(score, 2) - int(round(score, 3)))[1:].replace(".", "")
+                cat_labels = "_".join(LABEL_NAMES)
+                filename = f"model_{m_name}_{score_str}_{cat_labels}"
+                with open(f'./temp/{filename}.pickle', 'wb') as file:
                     # Pickle the object and save it to the file
                     pickle.dump(clf, file)
 
@@ -222,26 +272,19 @@ def main() -> None:
     elif args.optimize:
 
         names = [
-            "RBF SVM",
-            "MLP Classifier",
+            "KNN",
         ]
 
         classifiers = [
-            SVC(kernel='rbf'),
-            MLPClassifier(max_iter=10000),
+            KNeighborsClassifier(len(LABEL_DIRS)),
         ]
 
         param_dist = [
             {
-                "C": np.linspace(0.0001, 2, num=50), # random values from [0, 1]
-                "gamma": list(range(1, 10)),
-                "degree": list(range(2, 15)),
-            },
-            {
-                "hidden_layer_sizes": list(range(100, 1000, 100)),
-                "solver": ["lbfgs", "sgd", "adam"],
-                "alpha": np.linspace(0.0001, 2, num=25),
-                "learning_rate": ["constant", "invscaling", "adaptive"],
+                "weights": ["uniform", "distance"],
+                "algorithm": ["auto", "ball_tree", "kd_tree", "brute"],
+                "leaf_size": list(range(4, 80, 2)),
+                "p": [1, 2],
             },
         ]
 
@@ -255,7 +298,7 @@ def main() -> None:
         for i, clf in enumerate(classifiers):
 
             rsh = HalvingRandomSearchCV(
-                estimator=clf, param_distributions=param_dist[i], factor=2, verbose=1
+                estimator=clf, param_distributions=param_dist[i], factor=2, verbose=3
             )
             rsh.fit(X, y)
 
