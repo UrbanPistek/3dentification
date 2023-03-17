@@ -3,11 +3,13 @@ import cv2
 import copy
 import webcolors
 import numpy as np
+import threading
 
-from colour import get_colour_name
+from util.colour import get_colour_name
 
 # Store globally for now
-vid = cv2.VideoCapture(0)
+# vid = cv2.VideoCapture(0) # webcam
+vid = cv2.VideoCapture("/dev/video2") # usb cam
 
 # Get baseline values
 def setup():
@@ -45,40 +47,22 @@ def classify_color(frames: np.ndarray):
     mean = frame_avgs.mean(axis=0)
 
     # Drop alpha channel and add tolerance
-    smin = (mean[0:3] - 15) # Sub 5
-    smax = (mean[0:3] + 15) # Add 5
+    smin = (mean[0:3] - 5) # Sub 5
+    smax = (mean[0:3] + 5) # Add 5
 
     minRange = tuple(smin.tolist())
     maxRange = tuple(smax.tolist())
 
-    mask = cv2.inRange(frame, minRange, maxRange)
-    masked_frame = cv2.bitwise_and(frame, frame, mask=mask)
+    # mask = cv2.inRange(frame, minRange, maxRange)
+    # masked_frame = cv2.bitwise_and(frame, frame, mask=mask)
 
-    # print(f"masked frame: {masked_frame.shape}")
-
-    # remove zeros (black)
-    filt_frame = masked_frame.mean(axis=2)
-
-    # print(f"filtered masked frame: {filt_frame.shape}")
-
-    # get non-zero values
-    non_zero = np.nonzero(filt_frame)
-    # print(f"non_zero: {len(non_zero[0])}, {len(non_zero[1])}")
-
-    final = masked_frame[non_zero]
-    # print(f"final: {final.shape}")
-    # print(f"final mean: {final.mean(axis=0)}")
-    # print(f"final min: {final.min(axis=0)}")    
-    # print(f"final max: {final.max(axis=0)}")
-
-    mean_flt = final.mean(axis=0)
-
-    input_vals = (mean_flt[2], mean_flt[1], mean_flt[0])
+    input_vals = (mean[2], mean[1], mean[0])
     actual_name, closest_name = get_colour_name(input_vals)
+    print(f"mean: {mean}")
     print ("mean actual colour name:", actual_name)
     print ("mean closest colour name:", closest_name)
 
-    return masked_frame
+    return mean
 
 def read_single_frame():
 
@@ -106,16 +90,61 @@ def main():
 
             # capturing the current frame
             _ , frame = vid.read()
-            cv2.imshow('frame', frame) # display video feed
+                        # Get the height and width of the frame
+            height, width = frame.shape[:2]
+
+            # Calculate the coordinates of the center of the frame
+            center_x = int(width / 2)
+            center_y = int(height / 2)
+
+            # Calculate the coordinates of the top-left and bottom-right corners of the square
+            square_size = 75
+            square_tl = (center_x - int(square_size / 2), center_y - int(square_size / 2))
+            square_br = (center_x + int(square_size / 2), center_y + int(square_size / 2))
+
+            # Draw the square overlay on the frame
+            cv2.rectangle(frame, square_tl, square_br, (0, 0, 0), 2)
+
+            # Display the resulting frame
+            cv2.imshow('Camera Feed', frame)
 
             # collect set of frames
-            data = copy.deepcopy(frame)
-            frames.append(data)
+            # Get a 10x10 sample of the center of the matrix
+            n = frame.shape[0]
+            m = frame.shape[1]
+            dim = square_size
+            start_row = int((n-dim)/2)
+            end_row = start_row + dim
+            start_col = int((m-dim)/2)
+            end_col = start_col + dim
+
+            center_sample = copy.deepcopy(frame[start_row:end_row, start_col:end_col])
+            # data = copy.deepcopy(frame)
+
+            frames.append(center_sample)
             if len(frames) > 25: 
                 print("calculating...")
                 frames = np.asarray(frames, dtype=float)
-                mask = classify_color(frames)
-                cv2.imshow('mask', mask)
+                
+                mean = classify_color(frames)
+                # mask = cv2.inRange(frame, lower, upper)
+                # masked_frame = cv2.bitwise_and(frame, frame, mask=mask)
+                # cv2.imshow('colour detected', masked_frame)
+
+                color = np.array([[[mean[2], mean[1], mean[1]]]], dtype=np.uint8)
+
+                # Convert the color array to BGR format (required by OpenCV)
+                color_bgr = cv2.cvtColor(color, cv2.COLOR_RGB2BGR)
+
+                # Create a 25x25 black image
+                image = np.zeros((25, 25, 3), dtype=np.uint8)
+
+                # Fill the image with the desired color
+                image[:] = color_bgr
+
+                # Display the resulting image
+                cv2.imshow('Color Plot', image)
+
                 frames = []
 
             print(f"frames[{len(frames)}]")
