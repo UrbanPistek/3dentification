@@ -26,6 +26,9 @@ scan_df = None
 fig = plt.Figure(figsize=(12, 7), dpi=100)
 ax = fig.add_subplot(111)
 
+cfig = plt.Figure(figsize=(1, 1), dpi=100)
+cax = cfig.add_subplot(111)
+
 # Leds used
 LEDS = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
 Spectra = SpectraGen(led_wavelengths=LEDS)
@@ -128,6 +131,9 @@ class App(customtkinter.CTk):
         # create calibration info frame
         self.calibration_info = customtkinter.CTkFrame(self, width=400, height=300)
         self.calibration_info.grid(row=1, column=2, padx=(10, 20), pady=(10, 10), sticky="nsew")
+        self.colour_canvas = FigureCanvasTkAgg(cfig, master=self.calibration_info)
+        self.colour_canvas.draw()
+        self.colour_canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
 
         # set default values
         self.appearance_mode_optionemenu.set("Dark")
@@ -196,6 +202,12 @@ class App(customtkinter.CTk):
         input_vals = (mean[2], mean[1], mean[0])
         _, closest_name = get_colour_name(input_vals)
         self.textbox.insert("end", f"\nColour: {closest_name} " + str(mean))
+
+        mean_colour = np.asarray(input_vals, dtype=int)
+        cax.clear()
+        cax.set_title(f"Detected Colour: {closest_name}")
+        cax.imshow([[mean_colour]])
+        self.colour_canvas.draw()
 
     def scan(self):
 
