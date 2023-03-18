@@ -201,9 +201,9 @@ class App(customtkinter.CTk):
 
         input_vals = (mean[2], mean[1], mean[0])
         _, closest_name = get_colour_name(input_vals)
-        self.textbox.insert("end", f"\nColour: {closest_name} " + str(mean))
-
         mean_colour = np.asarray(input_vals, dtype=int)
+        self.textbox.insert("end", f"\nColour [rgb]: {closest_name} " + str(mean_colour))
+
         cax.clear()
         cax.set_title(f"Detected Colour: {closest_name}")
         cax.imshow([[mean_colour]])

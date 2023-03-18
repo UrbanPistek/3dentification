@@ -1,0 +1,192 @@
+{
+    "abs": {
+        "train":{
+            "scan": [
+                "abs_black",
+                "abs_brown",
+                "abs_dark_blue",
+                "abs_dark_pink",
+                "abs_green",
+                "abs_grey",
+                "abs_light_blue",
+                "abs_lime",
+                "abs_pink",
+                "abs_purple",
+                "abs_red",
+                "abs_white",
+                "abs_yellow"
+            ],
+            "colour": [
+                [40, 61, 69],
+                [111, 97, 89],
+                [12, 142, 213],
+                [210, 92, 164],
+                [7, 153, 97],
+                [116, 132, 140],
+                [109, 223, 223],
+                [105, 213, 119],
+                [214, 202, 224],
+                [71, 55, 149],
+                [227, 94, 110],
+                [234, 239, 244],
+                [200, 212, 120]
+            ]
+        },
+        "val":{
+            "scan": [
+                "abs_blue",
+                "abs_dark_yellow",
+                "abs_light_purple",
+                "abs_turquoise",
+                "abs_white2"
+            ],
+            "colour": [
+                [5, 174, 194],
+                [204, 174, 104],
+                [142, 112, 179],
+                [4, 174, 148],
+                [233, 240, 246]
+            ]
+        }
+    },
+    "pla": {
+        "train":{
+            "scan": [
+                "pla_black",
+                "pla_dark_blue",
+                "pla_dark_blue2",
+                "pla_dark_blue3",
+                "pla_dark_green",
+                "pla_dark_grey",
+                "pla_dark_pink",
+                "pla_dark_yellow",
+                "pla_grey",
+                "pla_light_blue",
+                "pla_light_brown",
+                "pla_light_grey",
+                "pla_lime",
+                "pla_orange",
+                "pla_purple",
+                "pla_red",
+                "pla_red2",
+                "pla_red3",
+                "pla_white",
+                "pla_white2",
+                "pla_yellow",
+                "pla_purple2"
+            ],
+            "colour": [
+                [53, 79, 92],
+                [0, 69, 196],
+                [0, 69, 196],
+                [0, 69, 196],
+                [71, 157, 113],
+                [67, 106, 126],
+                [165, 67, 146],
+                [215, 180, 44],
+                [127, 152, 165],
+                [9, 193, 231],
+                [205, 194, 188],
+                [190, 192, 198],
+                [78, 223, 152],
+                [228, 146, 96],
+                [122, 81, 165],
+                [247, 104, 109],
+                [238, 97, 70],
+                [238, 97, 70],
+                [255, 254, 255],
+                [255, 254, 255],
+                [231, 215, 132],
+                [164, 83, 163]
+            ]
+        },
+        "val":{
+            "scan": [
+                "pla_blue",
+                "pla_dark_blue",
+                "pla_dark_grey",
+                "pla_dark_pink",
+                "pla_dark_yellow",
+                "pla_green",
+                "pla_grey",
+                "pla_light_green",
+                "pla_red",
+                "pla_white",
+                "pla_shiny_purple"
+            ],
+            "colour": [
+                [0, 141, 201],
+                [43, 125, 224],
+                [101, 133, 140],
+                [183, 130, 200],
+                [251, 205, 114],
+                [0, 187, 133],
+                [151, 176, 186],
+                [63, 153, 71],
+                [221, 67, 45],
+                [231, 254, 254],
+                [254, 196, 243]
+            ]
+        }
+    },
+    "empty": {
+        "train":{
+            "scan": [
+                "empty1",
+                "empty2",
+                "empty3",
+                "empty4",
+                "empty5",
+                "empty6",
+                "empty7"
+            ],
+            "colour": [
+                [65, 96, 115],
+                [66, 97, 115],
+                [95, 91, 97],
+                [66, 96, 115],
+                [92, 91, 100],
+                [92, 92, 101],
+                [66, 96, 114]
+            ]
+        },
+        "val":{
+            "scan": [
+                "empty1",
+                "empty2",
+                "empty3",
+                "empty4"
+            ],
+            "colour": [
+                [66, 95, 115],
+                [67, 96, 115],
+                [92, 92, 100],
+                [65, 96, 114]
+            ]
+        }
+    },
+    "petg": {
+        "train":{
+            "scan": [
+                "petg_clear",
+                "petg_clear2",
+                "petg_white",
+                "petg_red"
+            ],
+            "colour": [
+                [199, 204, 207],
+                [176, 207, 218],
+                [255, 254, 255],
+                [251, 95, 105]
+            ]
+        },
+        "val":{
+            "scan": [
+                "petg_orange"
+            ],
+            "colour": [
+                [253, 142, 112]
+            ]
+        }
+    }
+}
