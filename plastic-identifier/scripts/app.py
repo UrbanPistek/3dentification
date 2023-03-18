@@ -15,6 +15,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 # custom modules
 from data_collection import get_scan
 from lib.postprocess import SpectraGen
+from lib.colour import classify_color, get_colour_name
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -29,7 +30,7 @@ ax = fig.add_subplot(111)
 LEDS = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
 Spectra = SpectraGen(led_wavelengths=LEDS)
 
-MODEL = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model1_VotingClassifier_100_abs_pla_empty.pickle"
+MODEL = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model1_HistogramGradientBoostingClassifier_95_abs_pla_empty.pickle"
 clf = pickle.load(open(MODEL, "rb"))
 
 labels = {
@@ -53,7 +54,7 @@ class App(customtkinter.CTk):
         # create sidebar frame with widgets
         self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(9, weight=1)
+        self.sidebar_frame.grid_rowconfigure(11, weight=1)
 
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="Controls", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
@@ -73,18 +74,26 @@ class App(customtkinter.CTk):
         # inference
         self.sidebar_button_4 = customtkinter.CTkButton(self.sidebar_frame, text="Inference", command=self.inference)
         self.sidebar_button_4.grid(row=4, column=0, padx=20, pady=10)
+        
+        # get colour
+        self.sidebar_button_5 = customtkinter.CTkButton(self.sidebar_frame, text="Get Colour", command=self.snapshot)
+        self.sidebar_button_5.grid(row=5, column=0, padx=20, pady=10)
+
+        # clear text box
+        self.sidebar_button_6 = customtkinter.CTkButton(self.sidebar_frame, text="Clear Text", command=self.clear_text)
+        self.sidebar_button_6.grid(row=6, column=0, padx=20, pady=10)
 
         # Utility features
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
+        self.appearance_mode_label.grid(row=7, column=0, padx=20, pady=(10, 0))
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
+        self.appearance_mode_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 10))
         self.scaling_label = customtkinter.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
-        self.scaling_label.grid(row=7, column=0, padx=20, pady=(10, 0))
+        self.scaling_label.grid(row=9, column=0, padx=20, pady=(10, 0))
         self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["50%", "75%", "80%", "90%", "100%", "110%", "120%", "150%"],
                                                                command=self.change_scaling_event)
-        self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
+        self.scaling_optionemenu.grid(row=10, column=0, padx=20, pady=(10, 20))
 
         # Create plot frame
         self.plot_frame = customtkinter.CTkFrame(self, width=700, height=400, corner_radius=2)
@@ -164,6 +173,30 @@ class App(customtkinter.CTk):
 
         self.after(self.delay, self.update)
 
+    def snapshot(self):
+
+        frames = []
+        for i in range(5):
+
+            _, frame = self.vid.read()
+            n = frame.shape[0]
+            m = frame.shape[1]
+            dim = 75
+            start_row = int((n-dim)/2)
+            end_row = start_row + dim
+            start_col = int((m-dim)/2)
+            end_col = start_col + dim
+
+            center_sample = copy.deepcopy(frame[start_row:end_row, start_col:end_col])
+            frames.append(center_sample)
+
+        frames = np.asarray(frames, dtype=float)
+        mean = classify_color(frames)
+
+        input_vals = (mean[2], mean[1], mean[0])
+        _, closest_name = get_colour_name(input_vals)
+        self.textbox.insert("end", f"\nColour: {closest_name} " + str(mean))
+
     def scan(self):
 
         if self.is_calibrated:
@@ -192,8 +225,10 @@ class App(customtkinter.CTk):
             self.canvas.draw()
 
         else:
-            self.textbox.delete("0.0", "end")  # delete all text
-            self.textbox.insert("0.0", "Please calibrate...")
+            self.textbox.insert("end", "\nPlease calibrate...")
+
+    def clear_text(self):
+        self.textbox.delete("0.0", "end")  # delete all text
 
     # Define the clear function
     def clear_plot(self):
@@ -210,8 +245,7 @@ class App(customtkinter.CTk):
         cali = Spectra.subtract_noise(df=calibration_df)
         Spectra.add_calibration_values(cali)
 
-        self.textbox.delete("0.0", "end")  # delete all text
-        self.textbox.insert("0.0", str(calibration_df))
+        self.textbox.insert("end", "\n" + str(calibration_df))
 
         # update
         self.is_calibrated = True
@@ -221,15 +255,16 @@ class App(customtkinter.CTk):
         if self.is_scanned:
             
             # fix dimensions for the model input
-            input = self.spectra_vals.reshape(1, -1)
-            res = clf.predict(input)
+            input = self.spectra_vals
+            ratios_vec = Spectra.create_ratios_vector()
+            input = np.concatenate((input, ratios_vec), axis=0)
+            input = input.reshape(1, -1)
 
-            self.textbox.delete("0.0", "end")  # delete all text
-            self.textbox.insert("0.0", labels[str(res[0])])
+            res = clf.predict(input)
+            self.textbox.insert("end", "\n" + labels[str(res[0])])
 
         else:
-            self.textbox.delete("0.0", "end")  # delete all text
-            self.textbox.insert("0.0", "Please scan...")
+            self.textbox.insert("end", "\n" + "Please scan...")
 
 if __name__ == "__main__":
     app = App()
