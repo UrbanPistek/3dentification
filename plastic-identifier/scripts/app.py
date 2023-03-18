@@ -2,9 +2,13 @@ import tkinter
 import random
 import pickle
 import tkinter.messagebox
+import cv2
+import copy
+import webcolors
 import customtkinter
 import pandas as pd
 import numpy as np
+import PIL.Image, PIL.ImageTk
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -25,7 +29,7 @@ ax = fig.add_subplot(111)
 LEDS = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
 Spectra = SpectraGen(led_wavelengths=LEDS)
 
-MODEL = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model_MLPClassifier_94.pickle"
+MODEL = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model1_VotingClassifier_100_abs_pla_empty.pickle"
 clf = pickle.load(open(MODEL, "rb"))
 
 labels = {
@@ -40,11 +44,10 @@ class App(customtkinter.CTk):
 
         # configure window
         self.title("DNIR Scanner")
-        self.geometry(f"{1200}x{900}")
+        self.geometry(f"{1600}x{900}")
 
         # configure grid layout (4x4)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure((2, 3), weight=0)
+        self.grid_columnconfigure((1, 2), weight=1)
         self.grid_rowconfigure((0, 1), weight=1)
 
         # create sidebar frame with widgets
@@ -79,13 +82,13 @@ class App(customtkinter.CTk):
         self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
         self.scaling_label = customtkinter.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
         self.scaling_label.grid(row=7, column=0, padx=20, pady=(10, 0))
-        self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
+        self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["50%", "75%", "80%", "90%", "100%", "110%", "120%", "150%"],
                                                                command=self.change_scaling_event)
         self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
 
         # Create plot frame
-        self.plot_frame = customtkinter.CTkFrame(self, width=600, height=700, corner_radius=2)
-        self.plot_frame.grid(row=0, column=1, padx=(20, 20), pady=(10, 10), sticky="nsew")
+        self.plot_frame = customtkinter.CTkFrame(self, width=700, height=400, corner_radius=2)
+        self.plot_frame.grid(row=0, column=1, padx=(20, 10), pady=(10, 10), sticky="nsew")
 
         # add canvas
         self.canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
@@ -93,20 +96,29 @@ class App(customtkinter.CTk):
         self.canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
 
         # Text frame for data dumping 
-        self.textbox = customtkinter.CTkTextbox(self, width=600, height=200)
-        self.textbox.grid(row=1, column=1, padx=(20, 20), pady=(10, 10), sticky="nsew")
-        
-        # create scan info frame
-        self.info_frame = customtkinter.CTkFrame(self)
-        self.info_frame.grid(row=0, column=3, padx=(20, 20), pady=(20, 0), sticky="nsew")
-        self.info_frame_group = customtkinter.CTkLabel(master=self.info_frame, text="Info:")
-        self.info_frame_group.grid(row=0, column=2, columnspan=1, padx=10, pady=10, sticky="")
+        self.textbox = customtkinter.CTkTextbox(self, width=300, height=300)
+        self.textbox.grid(row=1, column=1, padx=(20, 10), pady=(10, 10), sticky="nsew")
+
+        # Video capture
+        self.vid = cv2.VideoCapture("/dev/video2")
 
         # create calibration info frame
-        self.calibration_info = customtkinter.CTkFrame(self)
-        self.calibration_info.grid(row=1, column=3, padx=(20, 20), pady=(20, 0), sticky="nsew")
-        self.calibration_info_group = customtkinter.CTkLabel(master=self.calibration_info, text="Calibration Info:")
-        self.calibration_info_group.grid(row=0, column=2, columnspan=1, padx=10, pady=10, sticky="")
+        self.camera_feed = customtkinter.CTkFrame(self, width=400, height=300)
+        self.camera_feed.grid(row=0, column=2, padx=(10, 20), pady=(10, 10), sticky="nsew")
+
+        _, temp_frame = self.vid.read()
+        temp_img = PIL.Image.fromarray(temp_frame)
+        self.image = customtkinter.CTkImage(temp_img, size=(400, 300))
+        self.camera_label_info = customtkinter.CTkLabel(self.camera_feed, text="Camera Feed:", font=customtkinter.CTkFont(size=20, weight="bold"))
+        self.camera_label_info.grid(row=0, column=0, padx=20, pady=10)
+        self.camera_label = customtkinter.CTkLabel(self.camera_feed, text="", image=self.image)
+        self.camera_label.grid(row=1, column=0, padx=20, pady=10)
+        self.delay = 5
+        self.update()
+
+        # create calibration info frame
+        self.calibration_info = customtkinter.CTkFrame(self, width=400, height=300)
+        self.calibration_info.grid(row=1, column=2, padx=(10, 20), pady=(10, 10), sticky="nsew")
 
         # set default values
         self.appearance_mode_optionemenu.set("Dark")
@@ -122,6 +134,35 @@ class App(customtkinter.CTk):
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         customtkinter.set_widget_scaling(new_scaling_float)
+
+    def update(self):
+        # Get a frame from the video source
+        ret, frame = self.vid.read()
+
+        if ret:
+            # Convert the frame from BGR to RGB
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # Get the height and width of the frame
+            height, width = frame.shape[:2]
+
+            # Calculate the coordinates of the center of the frame
+            center_x = int(width / 2)
+            center_y = int(height / 2)
+
+            # Calculate the coordinates of the top-left and bottom-right corners of the square
+            square_size = 75
+            square_tl = (center_x - int(square_size / 2), center_y - int(square_size / 2))
+            square_br = (center_x + int(square_size / 2), center_y + int(square_size / 2))
+
+            # Draw the square overlay on the frame
+            cv2.rectangle(frame, square_tl, square_br, (0, 0, 0), 2)
+
+            img = PIL.Image.fromarray(frame)
+            self.camera_label.imgtk = customtkinter.CTkImage(img, size=(400, 300))
+            self.camera_label.configure(image=customtkinter.CTkImage(img, size=(400, 300)))
+
+        self.after(self.delay, self.update)
 
     def scan(self):
 
