@@ -169,22 +169,22 @@
         "train":{
             "scan": [
                 "petg_clear",
-                "petg_clear2",
                 "petg_white",
                 "petg_red"
             ],
             "colour": [
                 [199, 204, 207],
-                [176, 207, 218],
                 [255, 254, 255],
                 [251, 95, 105]
             ]
         },
         "val":{
             "scan": [
+                "petg_clear2",
                 "petg_orange"
             ],
             "colour": [
+                [176, 207, 218],
                 [253, 142, 112]
             ]
         }

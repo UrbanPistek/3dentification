@@ -769,6 +769,79 @@ def plot12(save=False):
         plt.savefig(f'figures/{filename}.png')
     else:
         plt.show()
+
+def plot13(save=False):
+    """
+    Compare abs, pla, petg
+    """
+
+    # led config
+    leds = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
+    Spectra = SpectraGen(led_wavelengths=leds)
+
+    # calibration data
+    calibration_files = {
+        "1": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id1_daytime_calibration_2023_03_05.csv",
+        "2": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id2_late_afternoon_calibration_2023_03_05.csv",
+        "3": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id3_daytime_calibration_2023_03_06.csv",
+    }
+    df1 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/abs/bv1_id1_abs_white_2023_03_05_1678039435.csv")
+    df2 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/pla/bv1_id1_pla_white_2023_03_05_1678042679.csv")
+    df3 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/abs/bv1_id1_abs_black_2023_03_05_1678041025.csv")
+    df4 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/pla/bv1_id1_pla_black_2023_03_05_1678041849.csv")
+    df5 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/petg/bv1_id1_petg_white_2023_03_05_1678047349.csv")
+    df6 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/petg/bv1_id1_petg_red_2023_03_05_1678047709.csv")
+    df7 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/val/other/petg/bv1_id1_petg_orange_2023_03_05_1678048368.csv")
+    df8 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/abs/bv1_id1_abs_red_2023_03_05_1678040622.csv")
+    df9 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/pla/bv1_id1_pla_red_2023_03_05_1678042799.csv")
+
+    fig1, (ax1) = plt.subplots(1, 1, gridspec_kw={'height_ratios': [1]}, figsize=(12,7), sharex=True)
+
+    # Overall Plot
+    leds_ordered = sorted(leds)
+    ax1.set_title(f"PLA, ABS, PETG\nLeds: {leds_ordered}")
+
+    labels = ['abs_white','pla_white', 'abs_black', 'pla_black', 'petg_white', 'petg_red', 'petg_orange', 'abs_red', 'pla_red']
+    colors = ['k', 'r', 'k', 'r', 'b', 'b', 'b', 'k', 'r']
+    markers = ['o', 'v', '1', 's', 'p', '*', 'x', 'd', '>']
+
+    dfs = [df1, df2, df3, df4, df5, df6, df7, df8, df9]
+    cali_ids = [1, 1, 1, 1, 1, 1, 1, 1, 1]
+
+    for i, df in enumerate(dfs):
+
+        # configure calibration
+        df_cali = pd.read_csv(calibration_files[str(cali_ids[i])])
+        df_cali.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        cali = Spectra.subtract_noise(df=df_cali)
+        Spectra.add_calibration_values(cali)
+        
+        df.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        Spectra.add_measurements(df)
+        ys = Spectra.filtered_spectra()
+
+        # zip & sort for nice plot
+        zipped = list(zip(leds, ys))
+        sorted_zipped = sorted(zipped, key=lambda x: x[0])
+        xs, ys = zip(*sorted_zipped)
+
+        ax1.set_ylim(0, 0.8) # Relative intensity is bound [0,1]
+        ax1.plot(xs, ys, c=colors[i], label=labels[i], marker=markers[i], ms=7)
+
+    ax1.set_ylabel("Relative Intensity")
+    ax1.set_xlabel("Wavelength (nm)")
+    ax1.legend()
+
+    # save plot and results
+    if save:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        # save plot
+        filename = f"bv1_pla_v_abs_v_petg"
+        plt.savefig(f'figures/{filename}.png')
+    else:
+        plt.show()
     
     
 def main():
@@ -786,8 +859,9 @@ def main():
     # plot8(save=True)
     # plot9(save=True)
     # plot10(save=True)
-    plot11(save=True)
-    plot12(save=True)
+    # plot11(save=True)
+    # plot12(save=True)
+    plot13(save=True)
 
 if __name__ == "__main__":
     main()

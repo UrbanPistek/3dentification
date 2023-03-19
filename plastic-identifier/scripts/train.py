@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Models
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import ConfusionMatrixDisplay
@@ -49,10 +49,16 @@ CALIBRATION_FILES = [
     "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id4_late_afternoon_calibration_2023_03_15.csv",
 ]
 
+# Load colour data
+COLOUR_DATA = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/colours.json"
+with open(COLOUR_DATA, 'r') as f:
+    data = f.read()
+    COLOUR_DICT = json.loads(data)
+
 # Directories for each category
-LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/non_plastics", "/other/petg", "/other/plastics"] 
-LABELS = [0, 1, 2, 3, 4, 5]
-LABEL_NAMES = ["abs", "pla", "empty", "non_plastics", "petg", "plastics"]
+# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/non_plastics", "/other/petg", "/other/plastics"] 
+# LABELS = [0, 1, 2, 3, 4, 5]
+# LABEL_NAMES = ["abs", "pla", "empty", "non_plastics", "petg", "plastics"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/non_plastics", "/other/plastics"] 
 # LABELS = [0, 1, 2, 3, 4]
@@ -74,9 +80,9 @@ LABEL_NAMES = ["abs", "pla", "empty", "non_plastics", "petg", "plastics"]
 # LABELS = [0, 1, 2, 3]
 # LABEL_NAMES = ["abs", "pla", "empty", "non_plastics"]
 
-# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/petg"] 
-# LABELS = [0, 1, 2, 3]
-# LABEL_NAMES = ["abs", "pla", "empty", "petg"]
+LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/petg"] 
+LABELS = [0, 1, 2, 3]
+LABEL_NAMES = ["abs", "pla", "empty", "petg"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/empty", "/other"]
 # LABELS = [0, 1, 2, 3]
@@ -96,6 +102,9 @@ LABEL_NAMES = ["abs", "pla", "empty", "non_plastics", "petg", "plastics"]
 
 # For regex
 CALI_ID_REGEX =  r"_id(\d+)_"
+
+# For colour data 
+COLOUR_REGEX = r"_id[0-9]_(.*?)_2023"
 
 def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_args:
     parser.add_argument(
@@ -131,7 +140,33 @@ def init_spectra_cal_ref(S: SpectraGen, calibration_file: str) -> None:
     cali = S.subtract_noise(df=df_cali)
     S.add_calibration_values(cali)
 
-def extract_data(x: list, y: list, S: SpectraGen, label: int, glob_files, enable_ratios_vec=False) -> None: 
+def add_colour_data(file: str) -> np.ndarray:
+    """
+    Bit janky, but quickly adding colour data after the fact.
+    """
+
+    try:
+        # Extract info from file name
+        match = re.search(COLOUR_REGEX, file).group(1)
+    
+        # Split to get material type
+        if "empty" in match:
+            material = "empty"
+        else:
+            material = match.split('_', 1)[0]
+
+        dir_type = "train"
+        if "val" in file:
+            dir_type = "val"
+        
+        idx = COLOUR_DICT[material][dir_type]["scan"].index(match)
+        rgb = COLOUR_DICT[material][dir_type]["colour"][idx]
+
+        return np.asarray(rgb, dtype=int)
+    except:
+        print(f"==> ERROR: {file}")
+
+def extract_data(x: list, y: list, S: SpectraGen, label: int, glob_files, enable_ratios_vec=False, enable_colour_data=False) -> None: 
 
     for file in glob_files:
         df = pd.read_csv(file)
@@ -142,7 +177,27 @@ def extract_data(x: list, y: list, S: SpectraGen, label: int, glob_files, enable
         # Add ratios vector
         if enable_ratios_vec:
             ratios_vec = S.create_ratios_vector()
+
+            # Manually normalize the data
+            max_ratio = max(ratios_vec)
+            min_ratio = min(ratios_vec)
+
+            for i in range(len(ratios_vec)):
+                if (max_ratio - min_ratio) == 0:
+                    ratios_vec[i] = 0
+                elif ratios_vec[i] == 0:
+                    ratios_vec[i] = 0
+                else:
+                    ratios_vec[i] = (ratios_vec[i] - min_ratio) / (max_ratio - min_ratio) # MinMax scaling
+
             ys = np.concatenate((ys, ratios_vec), axis=0)
+
+        # Get colour data
+        if enable_colour_data:
+            rgb = add_colour_data(file)
+            rgb = (rgb) / (255) # MinMax scaling
+            
+            ys = np.concatenate((ys, rgb), axis=0)
 
         x.append(ys)
         y.append(label)
@@ -151,7 +206,7 @@ def merge_data(Spectra: SpectraGen, directory: str, label: int, calibrationId: i
 
     # Grab all files in the directory according to a specific calibration id
     files = glob.glob(directory + f"/**/*_id{calibrationId}_*.csv", recursive=True)
-    extract_data(x, y, Spectra, label, files, enable_ratios_vec=True)
+    extract_data(x, y, Spectra, label, files, enable_ratios_vec=True, enable_colour_data=True)
 
 def gen_datasets(Spectra: SpectraGen) -> np.ndarray:
     
@@ -189,6 +244,8 @@ def main() -> None:
 
     train_x, train_y, test_x, test_y = gen_datasets(Spectra)
     print(f"\ntrain_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
+    print(f"Inputs: ", train_x[0])
+    print(f"Outputs: ", train_y[0])
 
     # ===========================[ Training ]==============================
     if args.train: 
@@ -236,7 +293,8 @@ def main() -> None:
 
         for name, clf in zip(names, classifiers):
 
-            clf = make_pipeline(StandardScaler(), clf)
+            # clf = make_pipeline(StandardScaler(), clf)
+            # clf = make_pipeline(MinMaxScaler(), clf)
             clf.fit(train_x, train_y)
             score = clf.score(test_x, test_y)
 
