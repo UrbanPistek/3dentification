@@ -8,7 +8,6 @@ __pycache__
 *.png
 .ipynb_checkpoints
 plastic-identifier/scripts/data/base_dataset
-plastic-identifier/scripts/data/dataset2
 plastic-identifier/scripts/temp
 
 # Keep specific plots

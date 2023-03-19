@@ -39,7 +39,7 @@ from lib.postprocess import SpectraGen
 LEDS = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
 
 # Locations of data
-DATA_DIR = "./data/dataset1"
+DATA_DIR = "./data/dataset2"
 TRAIN_DIR = DATA_DIR + "/train"
 VAL_DIR = DATA_DIR + "/val"
 CALIBRATION_FILES = [
@@ -47,10 +47,11 @@ CALIBRATION_FILES = [
     "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id2_late_afternoon_calibration_2023_03_05.csv",
     "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id3_daytime_calibration_2023_03_06.csv",
     "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id4_late_afternoon_calibration_2023_03_15.csv",
+    "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset2/bv1_id5_afternoon_calibration_2023_03_19.csv"
 ]
 
 # Load colour data
-COLOUR_DATA = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/colours.json"
+COLOUR_DATA = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset2/colours.json"
 with open(COLOUR_DATA, 'r') as f:
     data = f.read()
     COLOUR_DICT = json.loads(data)
@@ -152,8 +153,13 @@ def add_colour_data(file: str) -> np.ndarray:
         # Split to get material type
         if "empty" in match:
             material = "empty"
+        elif "non_plastics" in file:
+            material = "non_plastics"
         else:
             material = match.split('_', 1)[0]
+
+            if material == "plastic":
+                material = material + "s"
 
         dir_type = "train"
         if "val" in file:
@@ -287,7 +293,7 @@ def main() -> None:
             KNeighborsClassifier(n_neighbors=len(LABEL_DIRS)),
             SVC(kernel="linear", C=0.025),
             SVC(gamma=2, C=1),
-            MLPClassifier(alpha=1, max_iter=10000),
+            MLPClassifier(alpha=0.5, max_iter=10000, solver='adam', learning_rate='invscaling', hidden_layer_sizes=200),
             QuadraticDiscriminantAnalysis(),
         ]
 
@@ -331,10 +337,12 @@ def main() -> None:
 
         names = [
             "KNN",
+            # "MLP Classifier",
         ]
 
         classifiers = [
             KNeighborsClassifier(len(LABEL_DIRS)),
+            # MLPClassifier(max_iter=10000),
         ]
 
         param_dist = [
@@ -344,6 +352,12 @@ def main() -> None:
                 "leaf_size": list(range(4, 80, 2)),
                 "p": [1, 2],
             },
+            #  {	
+            #     "hidden_layer_sizes": list(range(50, 2000, 50)),	
+            #     "solver": ["lbfgs", "sgd", "adam"],	
+            #     "alpha": np.linspace(0.0001, 2, num=25),	
+            #     "learning_rate": ["constant", "invscaling", "adaptive"],	
+            # },
         ]
 
         print(f"Optimizing for: {names}")
@@ -356,7 +370,7 @@ def main() -> None:
         for i, clf in enumerate(classifiers):
 
             rsh = HalvingRandomSearchCV(
-                estimator=clf, param_distributions=param_dist[i], factor=2, verbose=3
+                estimator=clf, param_distributions=param_dist[i], factor=2, verbose=3, n_jobs=-1
             )
             rsh.fit(X, y)
 
