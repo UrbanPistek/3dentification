@@ -1,3 +1,4 @@
+import os
 import tkinter
 import random
 import pickle
@@ -33,13 +34,13 @@ cax = cfig.add_subplot(111)
 LEDS = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
 Spectra = SpectraGen(led_wavelengths=LEDS)
 
-MODEL = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model1_HistogramGradientBoostingClassifier_95_abs_pla_empty.pickle"
-clf = pickle.load(open(MODEL, "rb"))
-
 labels = {
     "0": "abs",
     "1": "pla",
     "2": "empty",
+    "3": "non_plastic",
+    "4": "petg",
+    "5": "plastic"
 }
 
 class App(customtkinter.CTk):
@@ -52,7 +53,8 @@ class App(customtkinter.CTk):
 
         # configure grid layout (4x4)
         self.grid_columnconfigure((1, 2), weight=1)
-        self.grid_rowconfigure((0, 1), weight=1)
+        self.grid_rowconfigure((0, 2), weight=1)
+        self.grid_rowconfigure((1), weight=0)
 
         # create sidebar frame with widgets
         self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
@@ -109,7 +111,7 @@ class App(customtkinter.CTk):
 
         # Text frame for data dumping 
         self.textbox = customtkinter.CTkTextbox(self, width=300, height=300)
-        self.textbox.grid(row=1, column=1, padx=(20, 10), pady=(10, 10), sticky="nsew")
+        self.textbox.grid(row=2, column=1, padx=(20, 10), pady=(10, 10), sticky="nsew")
 
         # Video capture
         self.vid = cv2.VideoCapture("/dev/video2")
@@ -130,7 +132,7 @@ class App(customtkinter.CTk):
 
         # create calibration info frame
         self.calibration_info = customtkinter.CTkFrame(self, width=400, height=300)
-        self.calibration_info.grid(row=1, column=2, padx=(10, 20), pady=(10, 10), sticky="nsew")
+        self.calibration_info.grid(row=2, column=2, padx=(10, 20), pady=(10, 10), sticky="nsew")
         self.colour_canvas = FigureCanvasTkAgg(cfig, master=self.calibration_info)
         self.colour_canvas.draw()
         self.colour_canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
@@ -142,6 +144,23 @@ class App(customtkinter.CTk):
         # Data processing configurations
         self.is_calibrated = False
         self.is_scanned = False
+        self.set_colour = False
+
+        self.models = [
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model_GradientBoostingClassifier_99_abs_pla_empty.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model_GradientBoostingClassifier_99_abs_pla_empty_non_plastics_petg_plastics.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model_MLPClassifier_97_abs_pla_empty.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model_VotingClassifier_98_abs_pla_empty_non_plastics_petg_plastics.pickle",
+        ]
+
+        self.model_names_label = customtkinter.CTkLabel(self, text="Select Model:", anchor="w")
+        self.model_names_label.grid(row=1, column=1, padx=20, pady=(1, 1, ), sticky="w")
+        self.model_names = [str(os.path.basename(path)) for path in self.models if os.path.splitext(path)[1] == '.pickle']
+        self.models_optionemenu = customtkinter.CTkOptionMenu(self, values=self.model_names, command=self.change_model)
+        self.models_optionemenu.grid(row=1, column=1, padx=100, pady=(1, 1), sticky="w")
+
+        self.model = self.models[0]
+        self.clf = pickle.load(open(self.model, "rb"))
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
@@ -149,6 +168,13 @@ class App(customtkinter.CTk):
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         customtkinter.set_widget_scaling(new_scaling_float)
+
+    def change_model(self, new_model: str):
+        for model_path in self.models:
+            if new_model in model_path:
+                self.model = model_path
+                self.clf = pickle.load(open(self.model, "rb"))
+                self.textbox.insert("end", f"\nLoaded Model: {new_model}")
 
     def update(self):
         # Get a frame from the video source
@@ -209,6 +235,9 @@ class App(customtkinter.CTk):
         cax.imshow([[mean_colour]])
         self.colour_canvas.draw()
 
+        self.colour_values = mean_colour
+        self.set_colour = True
+
     def scan(self):
 
         if self.is_calibrated:
@@ -264,19 +293,36 @@ class App(customtkinter.CTk):
 
     def inference(self):
 
-        if self.is_scanned:
+        if self.is_scanned and self.set_colour:
             
             # fix dimensions for the model input
             input = self.spectra_vals
             ratios_vec = Spectra.create_ratios_vector()
+
+            # normalize ratios
+            max_ratio = max(ratios_vec)
+            min_ratio = min(ratios_vec)
+            for i in range(len(ratios_vec)):
+                if (max_ratio - min_ratio) == 0:
+                    ratios_vec[i] = 0
+                elif ratios_vec[i] == 0:
+                    ratios_vec[i] = 0
+                else:
+                    ratios_vec[i] = (ratios_vec[i] - min_ratio) / (max_ratio - min_ratio) # MinMax scaling
             input = np.concatenate((input, ratios_vec), axis=0)
+
+            # normalize colour
+            rgb = self.colour_values
+            rgb = (rgb) / (255) # MinMax scaling
+            input = np.concatenate((input, rgb), axis=0)
             input = input.reshape(1, -1)
 
-            res = clf.predict(input)
+            # make prediction
+            res = self.clf.predict(input)
             self.textbox.insert("end", "\n" + labels[str(res[0])])
 
         else:
-            self.textbox.insert("end", "\n" + "Please scan...")
+            self.textbox.insert("end", "\n" + "Please scan and/or get colour...")
 
 if __name__ == "__main__":
     app = App()
