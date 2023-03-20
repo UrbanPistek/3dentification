@@ -11,12 +11,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Models
+# ML
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
 from sklearn.ensemble import *
 from sklearn.neural_network import MLPClassifier
@@ -81,17 +82,17 @@ with open(COLOUR_DATA, 'r') as f:
 # LABELS = [0, 1, 2, 3]
 # LABEL_NAMES = ["abs", "pla", "empty", "non_plastics"]
 
-LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/petg"] 
-LABELS = [0, 1, 2, 3]
-LABEL_NAMES = ["abs", "pla", "empty", "petg"]
+# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/petg"] 
+# LABELS = [0, 1, 2, 3]
+# LABEL_NAMES = ["abs", "pla", "empty", "petg"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/empty", "/other"]
 # LABELS = [0, 1, 2, 3]
 # LABEL_NAMES = ["abs", "pla", "empty", "other"]
 
-# LABEL_DIRS = ["/abs", "/pla", "/empty"]
-# LABELS = [0, 1, 2]
-# LABEL_NAMES = ["abs", "pla", "empty"]
+LABEL_DIRS = ["/abs", "/pla", "/empty"]
+LABELS = [0, 1, 2]
+LABEL_NAMES = ["abs", "pla", "empty"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/other"]
 # LABELS = [0, 1, 2]
@@ -128,6 +129,11 @@ def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_a
         "--train", 
         action='store_true',
         help='Train a set of models')
+    parser.add_argument(
+        "-r",
+        "--random-shuffle", 
+        action='store_true',
+        help='Randomly shuffle training/testing data')
 
     return parser.parse_args()
 
@@ -250,8 +256,15 @@ def main() -> None:
 
     train_x, train_y, test_x, test_y = gen_datasets(Spectra)
     print(f"\ntrain_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
-    print(f"Inputs: ", train_x[0])
-    print(f"Outputs: ", train_y[0])
+
+    if args.random_shuffle:
+        # Combine train and test
+        xs = np.concatenate((train_x, test_x), axis=0)
+        ys = np.concatenate((train_y, test_y), axis=0)
+        print(f"\nxs: {xs.shape}, ys: {ys.shape}")
+
+        train_x, test_x, train_y, test_y = train_test_split(xs, ys, test_size=0.2, random_state=42)
+        print(f"\ntrain_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
 
     # ===========================[ Training ]==============================
     if args.train: 
@@ -274,18 +287,16 @@ def main() -> None:
         ]
 
         classifiers = [
-            DecisionTreeClassifier(max_depth=25),
-            RandomForestClassifier(max_depth=25, n_estimators=25, max_features=8),
+            DecisionTreeClassifier(max_depth=5),
+            RandomForestClassifier(max_depth=5, n_estimators=25, max_features=8),
             BaggingClassifier(estimator=SVC(),n_estimators=10, random_state=0),
-            ExtraTreesClassifier(n_estimators=25, random_state=0),
-            GradientBoostingClassifier(n_estimators=25, learning_rate=1.0, max_depth=1, random_state=0),
+            ExtraTreesClassifier(n_estimators=5, random_state=0),
+            GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=1, random_state=1),
             VotingClassifier(estimators=[
-                ('dt', DecisionTreeClassifier(max_depth=25)),
-                ('rf', RandomForestClassifier(max_depth=25, n_estimators=25, max_features=8)), 
-                ('bag', BaggingClassifier(estimator=SVC(),n_estimators=10, random_state=0)),
+                ('rf', RandomForestClassifier(max_depth=5, n_estimators=10, max_features=8)), 
                 ('knn', KNeighborsClassifier(len(LABEL_DIRS))), 
                 ('mlp', MLPClassifier(alpha=1, max_iter=10000)),
-                ('ada', AdaBoostClassifier()),
+                ('gb', GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=1, random_state=0)),
                 ('hgb', HistGradientBoostingClassifier()),
                 ], voting='hard'),
             HistGradientBoostingClassifier(),
@@ -299,8 +310,10 @@ def main() -> None:
 
         for name, clf in zip(names, classifiers):
 
+            # Normalize using built in methods
             # clf = make_pipeline(StandardScaler(), clf)
             # clf = make_pipeline(MinMaxScaler(), clf)
+
             clf.fit(train_x, train_y)
             score = clf.score(test_x, test_y)
 
@@ -319,9 +332,9 @@ def main() -> None:
 
             # Display confusion Matrix
             if args.verbose:
-                fig, ax = plt.subplots(figsize=(12,7))
-                ConfusionMatrixDisplay.from_estimator(clf, test_x, test_y, display_labels=LABEL_NAMES)
-                
+                cmp = ConfusionMatrixDisplay.from_estimator(clf, test_x, test_y, display_labels=LABEL_NAMES, xticks_rotation='vertical')
+                fig, ax = plt.subplots(figsize=(16,9))
+                cmp.plot(ax=ax)
                 ax.set_title(f"{name}: Confusion Matrix")
                 # save plot
                 if not os.path.exists('figures'):
