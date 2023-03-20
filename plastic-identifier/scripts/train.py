@@ -58,9 +58,9 @@ with open(COLOUR_DATA, 'r') as f:
     COLOUR_DICT = json.loads(data)
 
 # Directories for each category
-# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/non_plastics", "/other/petg", "/other/plastics"] 
-# LABELS = [0, 1, 2, 3, 4, 5]
-# LABEL_NAMES = ["abs", "pla", "empty", "non_plastics", "petg", "plastics"]
+LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/non_plastics", "/other/petg", "/other/plastics"] 
+LABELS = [0, 1, 2, 3, 4, 5]
+LABEL_NAMES = ["abs", "pla", "empty", "non_plastics", "petg", "plastics"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/non_plastics", "/other/plastics"] 
 # LABELS = [0, 1, 2, 3, 4]
@@ -90,9 +90,9 @@ with open(COLOUR_DATA, 'r') as f:
 # LABELS = [0, 1, 2, 3]
 # LABEL_NAMES = ["abs", "pla", "empty", "other"]
 
-LABEL_DIRS = ["/abs", "/pla", "/empty"]
-LABELS = [0, 1, 2]
-LABEL_NAMES = ["abs", "pla", "empty"]
+# LABEL_DIRS = ["/abs", "/pla", "/empty"]
+# LABELS = [0, 1, 2]
+# LABEL_NAMES = ["abs", "pla", "empty"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/other"]
 # LABELS = [0, 1, 2]
@@ -173,6 +173,9 @@ def add_colour_data(file: str) -> np.ndarray:
         
         idx = COLOUR_DICT[material][dir_type]["scan"].index(match)
         rgb = COLOUR_DICT[material][dir_type]["colour"][idx]
+
+        # Add some noise to ensure colours values are all not exactly the same
+        rgb = [x + random.randint(-10, 10) for x in rgb]
 
         return np.asarray(rgb, dtype=int)
     except:
