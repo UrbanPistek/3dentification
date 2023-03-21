@@ -18,5 +18,7 @@ plastic-identifier/scripts/model_info
 
 # Keep specific data
 !plastic-identifier/scripts/data/dataset1/**/*.csv
+!plastic-identifier/scripts/data/dataset2/**/*.csv
+!plastic-identifier/scripts/data/dataset3/**/*.csv
 
 # Keep specific model
