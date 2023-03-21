@@ -10,12 +10,13 @@ import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 # ML
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import ConfusionMatrixDisplay, mean_absolute_error
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
@@ -25,7 +26,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.experimental import enable_halving_search_cv  # noqa
-from sklearn.model_selection import HalvingRandomSearchCV, HalvingGridSearchCV
+from sklearn.model_selection import HalvingRandomSearchCV, HalvingGridSearchCV, KFold
 
 # Configure prints
 np.set_printoptions(precision=7, suppress=True)
@@ -134,6 +135,11 @@ def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_a
         "--random-shuffle", 
         action='store_true',
         help='Randomly shuffle training/testing data')
+    parser.add_argument(
+        "-c",
+        "--check-overfitting", 
+        action='store_true',
+        help='Check if models are overfitting on the data')
 
     return parser.parse_args()
 
@@ -176,6 +182,9 @@ def add_colour_data(file: str) -> np.ndarray:
 
         # Add some noise to ensure colours values are all not exactly the same
         rgb = [x + random.randint(-10, 10) for x in rgb]
+        
+        # Replace values less than 0 with 0 and greater than 255 with 255
+        rgb = [0 if value < 0 else 255 if value > 255 else value for value in rgb]
 
         return np.asarray(rgb, dtype=int)
     except:
@@ -254,6 +263,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     args = get_args(parser)
     
+    # ===========================[ Pre-processing ]==============================
     # Spectra generation object
     Spectra = SpectraGen(led_wavelengths=LEDS)
 
@@ -266,34 +276,36 @@ def main() -> None:
         ys = np.concatenate((train_y, test_y), axis=0)
         print(f"\nxs: {xs.shape}, ys: {ys.shape}")
 
-        train_x, test_x, train_y, test_y = train_test_split(xs, ys, test_size=0.2, random_state=42)
+        train_test_ratio = 0.2
+        train_x, test_x, train_y, test_y = train_test_split(xs, ys, test_size=train_test_ratio, random_state=42)
         print(f"\ntrain_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
 
     # ===========================[ Training ]==============================
     if args.train: 
         print(f"Training for: {LABEL_NAMES}")
 
+        # -----[ Select Models ]-----
         names = [
-            "Decision Tree",
-            "Random Forest",
-            "Bagging Classifier",
-            "Extra Trees Classifier",
+            # "Decision Tree",
+            # "Random Forest",
+            # "Bagging Classifier",
+            # "Extra Trees Classifier",
             "Gradient Boosting Classifier",
             "Voting Classifier",
-            "Histogram Gradient Boosting Classifier",
-            "AdaBoost",
-            "K Nearest Neighbors",
-            "Linear SVM",
-            "RBF SVM",
+            # "Histogram Gradient Boosting Classifier",
+            # "AdaBoost",
+            # "K Nearest Neighbors",
+            # "Linear SVM",
+            # "RBF SVM",
             "MLP Classifier",
-            "QDA",
+            # "QDA",
         ]
 
         classifiers = [
-            DecisionTreeClassifier(max_depth=5),
-            RandomForestClassifier(max_depth=5, n_estimators=25, max_features=8),
-            BaggingClassifier(estimator=SVC(),n_estimators=10, random_state=0),
-            ExtraTreesClassifier(n_estimators=5, random_state=0),
+            # DecisionTreeClassifier(max_depth=5),
+            # RandomForestClassifier(max_depth=5, n_estimators=25, max_features=8),
+            # BaggingClassifier(estimator=SVC(),n_estimators=10, random_state=0),
+            # ExtraTreesClassifier(n_estimators=5, random_state=0),
             GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=1, random_state=1),
             VotingClassifier(estimators=[
                 ('rf', RandomForestClassifier(max_depth=5, n_estimators=10, max_features=8)), 
@@ -302,15 +314,16 @@ def main() -> None:
                 ('gb', GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=1, random_state=0)),
                 ('hgb', HistGradientBoostingClassifier()),
                 ], voting='hard'),
-            HistGradientBoostingClassifier(),
-            AdaBoostClassifier(),
-            KNeighborsClassifier(n_neighbors=len(LABEL_DIRS)),
-            SVC(kernel="linear", C=0.025),
-            SVC(gamma=2, C=1),
+            # HistGradientBoostingClassifier(),
+            # AdaBoostClassifier(),
+            # KNeighborsClassifier(n_neighbors=len(LABEL_DIRS)),
+            # SVC(kernel="linear", C=0.025),
+            # SVC(gamma=2, C=1),
             MLPClassifier(alpha=0.5, max_iter=10000, solver='adam', learning_rate='invscaling', hidden_layer_sizes=200),
-            QuadraticDiscriminantAnalysis(),
+            # QuadraticDiscriminantAnalysis(),
         ]
 
+        # -----[ Loop for each Model ]-----
         for name, clf in zip(names, classifiers):
 
             # Normalize using built in methods
@@ -320,21 +333,45 @@ def main() -> None:
             clf.fit(train_x, train_y)
             score = clf.score(test_x, test_y)
 
-            # save model
+            # -----[ Save Model and Model Info ]-----
             if args.save:
                 if not os.path.exists('temp'):
                     os.makedirs('temp')
 
+                if not os.path.exists('model_info'):
+                    os.makedirs('model_info')
+
                 m_name = name.replace(" ", "")
+                datestamp = datetime.now().strftime('%Y/%m/%d').replace('/', '_').replace(' ', '_')
                 score_str = str(round(score, 2) - int(round(score, 3)))[1:].replace(".", "")
                 cat_labels = "_".join(LABEL_NAMES)
-                filename = f"model_{m_name}_{score_str}_{cat_labels}"
+                id = random.randint(0, 100)
+                filename = f"model{id}_{m_name}_{score_str}_{cat_labels}_{datestamp}"
+                
+                # Save model
                 with open(f'./temp/{filename}.pickle', 'wb') as file:
                     # Pickle the object and save it to the file
                     pickle.dump(clf, file)
 
-            # Display confusion Matrix
+                # Save model info
+                model_info = {
+                    "dataset": DATA_DIR, 
+                    "labels": LABEL_NAMES,
+                    "date": datestamp,
+                    "file": filename,
+                    "id": id,
+                    "train-test-split": train_test_ratio,
+                    "score": score, 
+                    "args": args,
+                    "params": clf.get_params()
+                }
+                with open(f'./model_info/{filename}.json', 'w') as file:
+                    json.dump(model_info, file, indent=2, default=str)
+
+            # -----[ Create Confusion Matrix ]-----
             if args.verbose:
+
+                # Confusion matrix
                 cmp = ConfusionMatrixDisplay.from_estimator(clf, test_x, test_y, display_labels=LABEL_NAMES, xticks_rotation='vertical')
                 fig, ax = plt.subplots(figsize=(16,9))
                 cmp.plot(ax=ax)
@@ -346,7 +383,43 @@ def main() -> None:
                 filename = f"cfm_{m_name}"
                 plt.savefig(f'figures/{filename}.png')
 
+            # -----[ Look and MAE ]-----
+            if args.check_overfitting:
+                
+                # Check Mean Absolute Error to check overfitting
+                xs = np.concatenate((train_x, test_x), axis=0)
+                ys = np.concatenate((train_y, test_y), axis=0)
+                kf = KFold(n_splits=(round(len(ys)/100)))
+                mae_train = []
+                mae_test = []
+                for train_index, test_index in kf.split(xs):
+                    
+                    X_train, X_test = xs[train_index], xs[test_index]
+                    y_train, y_test = ys[train_index], ys[test_index]
+
+                    clf.fit(X_train, y_train)
+                    y_train_pred = clf.predict(X_train)
+                    y_test_pred = clf.predict(X_test)
+                    mae_train.append(mean_absolute_error(y_train, y_train_pred))
+                    mae_test.append(mean_absolute_error(y_test, y_test_pred))
+
+                # Plot results
+                fig, ax = plt.subplots(figsize=(16,9))
+                folds = range(1, kf.get_n_splits() + 1)
+                ax.plot(folds, mae_train, 'o-', color='green', label='train')
+                ax.plot(folds, mae_test, 'o-', color='red', label='test')
+                ax.legend()
+                ax.set_title(f"{name}: MAE")
+                ax.set_xlabel('Number of fold')
+                ax.set_ylabel('Mean Absolute Error')
+                m_name = name.replace(" ", "")
+                filename = f"mae_{m_name}"
+                plt.savefig(f'figures/{filename}.png')
+
             print(f"CLF: {name}\n Score: {score}")
+            if args.verbose:
+                # Print out hyperparameters used
+                print(f"params: {clf.get_params()}")
 
     # ===========================[ Optimization ]==============================
     elif args.optimize:
