@@ -21,5 +21,6 @@ plastic-identifier/scripts/data/synthetic
 !plastic-identifier/scripts/data/dataset1/**/*.csv
 !plastic-identifier/scripts/data/dataset2/**/*.csv
 !plastic-identifier/scripts/data/dataset3/**/*.csv
+!plastic-identifier/scripts/data/dataset4/**/*.csv
 
 # Keep specific model
