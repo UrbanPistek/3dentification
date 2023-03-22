@@ -20,6 +20,8 @@ from lib.postprocess import SpectraGen
 LEDS = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
 
 SAMPLE_DATA_SIZE = 250
+EQUALIZE_LABELS = True
+TOTAL_SAMPLES = 5000
 
 # Locations of data
 DATA_DIR = "./data/dataset3"
@@ -89,6 +91,17 @@ def add_colour_data(file: str) -> np.ndarray:
 
 def extract_data(x: list, y: list, S: SpectraGen, label: int, glob_files) -> None: 
 
+    if EQUALIZE_LABELS:
+        sample_size = 0
+        total_files = len(glob_files)   
+        l = float(len(LABEL_NAMES))
+        a = 1/(l*2)
+        b = TOTAL_SAMPLES*a
+        c = b/total_files
+        sample_size = round(c)
+    else:
+        sample_size = SAMPLE_DATA_SIZE
+
     for file in glob_files:
 
         df = pd.read_csv(file)
@@ -99,10 +112,10 @@ def extract_data(x: list, y: list, S: SpectraGen, label: int, glob_files) -> Non
         var = S.get_variances()
         rgb = add_colour_data(file)
 
-        ys = [label] * SAMPLE_DATA_SIZE
+        ys = [label] * sample_size
         xs = []
 
-        for i in range(SAMPLE_DATA_SIZE):
+        for i in range(sample_size):
 
             # Add some noise to ensure colours values are all not exactly the same
             sample_rgb = [x + random.randint(-15, 15) for x in rgb]
@@ -187,6 +200,8 @@ def main() -> None:
 
     x, y = gen_datasets(Spectra)
     print(f"\nX: {x.shape}, y: {y.shape}")
+    unique_values, counts = np.unique(y, return_counts=True)
+    print(f"data split: labels:{unique_values}, counts: {counts}")
 
     # Save to a file
     datestamp = datetime.now().strftime('%Y/%m/%d').replace('/', '_').replace(' ', '_')
