@@ -1,15 +1,10 @@
 import os
 import re
-import sys
-import time
 import json
 import glob
-import pickle
 import random
-import argparse
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from datetime import datetime
 
 # Configure prints
@@ -24,7 +19,7 @@ from lib.postprocess import SpectraGen
 # Leds used
 LEDS = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
 
-SAMPLE_DATA_SIZE = 10
+SAMPLE_DATA_SIZE = 250
 
 # Locations of data
 DATA_DIR = "./data/dataset3"
@@ -104,18 +99,20 @@ def extract_data(x: list, y: list, S: SpectraGen, label: int, glob_files) -> Non
         var = S.get_variances()
         rgb = add_colour_data(file)
 
-        ys = []
+        ys = [label] * SAMPLE_DATA_SIZE
         xs = []
 
         for i in range(SAMPLE_DATA_SIZE):
 
             # Add some noise to ensure colours values are all not exactly the same
             sample_rgb = [x + random.randint(-15, 15) for x in rgb]
-            
-            # Replace values less than 0 with 0 and greater than 255 with 255
-            sample_rgb = [0 if value < 0 else 255 if value > 255 else value for value in rgb]
 
-            sample_values = [x + np.random.normal(loc=0, scale=np.sqrt(var[i])) for i,x in enumerate(values)]
+            # Replace values less than 0 with 0 and greater than 255 with 255
+            sample_rgb = np.asarray([0 if value < 0 else 255 if value > 255 else value for value in sample_rgb])
+            sample_rgb = (sample_rgb) / (255) # MinMax scaling
+
+            # Add guassian noise to samples
+            sample_values = np.asarray([x + np.random.normal(loc=0, scale=np.sqrt(var[i])) for i,x in enumerate(values)])
 
             # Add ratios vector
             dim = len(sample_values)
@@ -145,13 +142,10 @@ def extract_data(x: list, y: list, S: SpectraGen, label: int, glob_files) -> Non
             arrs = [sample_values, ratios_vec, sample_rgb]
             vec = np.concatenate(arrs)
 
-            ys.append(vec)
-            xs.append(label)
-
-        ys = np.asarray(ys)
-        xs = np.asarray(xs)
-        x.append(ys)
-        y.append(label)
+            xs.append(vec)
+        
+        x.extend(xs)
+        y.extend(ys)
 
 def merge_data(Spectra: SpectraGen, directory: str, label: int, calibrationId: int, x: list, y: list) -> None:
 
@@ -162,8 +156,7 @@ def merge_data(Spectra: SpectraGen, directory: str, label: int, calibrationId: i
 def gen_datasets(Spectra: SpectraGen) -> np.ndarray:
     
     # training dataset
-    train_x, train_y = [], []    
-    test_x, test_y = [], []
+    x, y = [], []    
 
     for calibration in CALIBRATION_FILES:
 
@@ -177,13 +170,13 @@ def gen_datasets(Spectra: SpectraGen) -> np.ndarray:
         # Merge data according to calibration ids
         # Run for training
         for i, dir in enumerate(LABEL_DIRS):
-            merge_data(Spectra, TRAIN_DIR+dir, i, cali_id, train_x, train_y)
+            merge_data(Spectra, TRAIN_DIR+dir, i, cali_id, x, y)
 
         # Run for validation
         for i, dir in enumerate(LABEL_DIRS):
-            merge_data(Spectra, VAL_DIR+dir, i, cali_id, test_x, test_y)
+            merge_data(Spectra, VAL_DIR+dir, i, cali_id, x, y)
 
-    return np.array(train_x), np.array(train_y), np.array(test_x), np.array(test_y)
+    return np.array(x), np.array(y)
 
 def main() -> None:
     print("Spectra Data Generation...")
@@ -192,8 +185,20 @@ def main() -> None:
     # Spectra generation object
     Spectra = SpectraGen(led_wavelengths=LEDS)
 
-    train_x, train_y, test_x, test_y = gen_datasets(Spectra)
-    print(f"\ntrain_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
+    x, y = gen_datasets(Spectra)
+    print(f"\nX: {x.shape}, y: {y.shape}")
+
+    # Save to a file
+    datestamp = datetime.now().strftime('%Y/%m/%d').replace('/', '_').replace(' ', '_')
+    cat_labels = "_".join(LABEL_NAMES)
+    filename = f"synthetic_{cat_labels}_{datestamp}_size_{x.shape[0]}"
+
+    if not os.path.exists('data/synthetic'):
+        os.makedirs('data/synthetic')
+
+    np.save("./data/synthetic/" + filename + "_X", x)
+    np.save("./data/synthetic/" + filename + "_y", y)
+    print(f"data saved: {filename}")
 
 if __name__ == "__main__":
     main()

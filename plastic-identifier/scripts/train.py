@@ -140,6 +140,11 @@ def get_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser.parse_a
         "--check-overfitting", 
         action='store_true',
         help='Check if models are overfitting on the data')
+    parser.add_argument(
+        "-m",
+        "--mock-data", 
+        action='store_true',
+        help='Use synthetic data for training')
 
     return parser.parse_args()
 
@@ -267,8 +272,15 @@ def main() -> None:
     # Spectra generation object
     Spectra = SpectraGen(led_wavelengths=LEDS)
 
-    train_x, train_y, test_x, test_y = gen_datasets(Spectra)
-    print(f"\ntrain_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
+    # -----[ Use specified synthetic data ]-----
+    if args.mock_data: 
+        xs = np.load("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/synthetic/synthetic_abs_pla_empty_non_plastics_petg_plastics_2023_03_21_size_2500_X.npy")
+        ys = np.load("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/synthetic/synthetic_abs_pla_empty_non_plastics_petg_plastics_2023_03_21_size_2500_y.npy")
+        train_test_ratio = 0.2
+        train_x, test_x, train_y, test_y = train_test_split(xs, ys, test_size=train_test_ratio, random_state=42)
+
+    else:
+        train_x, train_y, test_x, test_y = gen_datasets(Spectra)
 
     if args.random_shuffle:
         # Combine train and test
@@ -278,7 +290,8 @@ def main() -> None:
 
         train_test_ratio = 0.2
         train_x, test_x, train_y, test_y = train_test_split(xs, ys, test_size=train_test_ratio, random_state=42)
-        print(f"\ntrain_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
+    
+    print(f"\ntrain_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
 
     # ===========================[ Training ]==============================
     if args.train: 
@@ -291,13 +304,13 @@ def main() -> None:
             # "Bagging Classifier",
             # "Extra Trees Classifier",
             "Gradient Boosting Classifier",
-            "Voting Classifier",
+            # "Voting Classifier",
             # "Histogram Gradient Boosting Classifier",
             # "AdaBoost",
             # "K Nearest Neighbors",
             # "Linear SVM",
             # "RBF SVM",
-            "MLP Classifier",
+            # "MLP Classifier",
             # "QDA",
         ]
 
@@ -307,19 +320,19 @@ def main() -> None:
             # BaggingClassifier(estimator=SVC(),n_estimators=10, random_state=0),
             # ExtraTreesClassifier(n_estimators=5, random_state=0),
             GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=1, random_state=1),
-            VotingClassifier(estimators=[
-                ('rf', RandomForestClassifier(max_depth=5, n_estimators=10, max_features=8)), 
-                ('knn', KNeighborsClassifier(len(LABEL_DIRS))), 
-                ('mlp', MLPClassifier(alpha=1, max_iter=10000)),
-                ('gb', GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=1, random_state=0)),
-                ('hgb', HistGradientBoostingClassifier()),
-                ], voting='hard'),
+            # VotingClassifier(estimators=[
+            #     ('rf', RandomForestClassifier(max_depth=5, n_estimators=10, max_features=8)), 
+            #     ('knn', KNeighborsClassifier(len(LABEL_DIRS))), 
+            #     ('mlp', MLPClassifier(alpha=1, max_iter=10000)),
+            #     ('gb', GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=1, random_state=0)),
+            #     ('hgb', HistGradientBoostingClassifier()),
+            #     ], voting='hard'),
             # HistGradientBoostingClassifier(),
             # AdaBoostClassifier(),
             # KNeighborsClassifier(n_neighbors=len(LABEL_DIRS)),
             # SVC(kernel="linear", C=0.025),
             # SVC(gamma=2, C=1),
-            MLPClassifier(alpha=0.5, max_iter=10000, solver='adam', learning_rate='invscaling', hidden_layer_sizes=200),
+            # MLPClassifier(alpha=0.5, max_iter=10000, solver='adam', learning_rate='invscaling', hidden_layer_sizes=200),
             # QuadraticDiscriminantAnalysis(),
         ]
 
