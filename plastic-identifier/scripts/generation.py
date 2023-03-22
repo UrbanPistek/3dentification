@@ -21,7 +21,7 @@ LEDS = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
 
 SAMPLE_DATA_SIZE = 250
 EQUALIZE_LABELS = True
-TOTAL_SAMPLES = 5000
+TOTAL_SAMPLES = 10000
 
 # Locations of data
 DATA_DIR = "./data/dataset3"
@@ -207,6 +207,9 @@ def main() -> None:
     datestamp = datetime.now().strftime('%Y/%m/%d').replace('/', '_').replace(' ', '_')
     cat_labels = "_".join(LABEL_NAMES)
     filename = f"synthetic_{cat_labels}_{datestamp}_size_{x.shape[0]}"
+
+    if EQUALIZE_LABELS:
+        filename = filename + "_bal"
 
     if not os.path.exists('data/synthetic'):
         os.makedirs('data/synthetic')
