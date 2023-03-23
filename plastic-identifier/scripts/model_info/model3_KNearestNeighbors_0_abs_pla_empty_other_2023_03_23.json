@@ -1,0 +1,25 @@
+{
+  "dataset": "./data/dataset3",
+  "labels": [
+    "abs",
+    "pla",
+    "empty",
+    "other"
+  ],
+  "date": "2023_03_23",
+  "file": "model3_KNearestNeighbors_0_abs_pla_empty_other_2023_03_23",
+  "id": 3,
+  "train-test-split": 0.2,
+  "score": 0.9995009980039921,
+  "args": "Namespace(verbose=False, save=True, optimize=False, train=True, random_shuffle=False, check_overfitting=False, mock_data=True)",
+  "params": {
+    "algorithm": "auto",
+    "leaf_size": 30,
+    "metric": "minkowski",
+    "metric_params": null,
+    "n_jobs": null,
+    "n_neighbors": 4,
+    "p": 2,
+    "weights": "uniform"
+  }
+}
