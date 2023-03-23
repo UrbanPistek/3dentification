@@ -1,6 +1,6 @@
 # dataset 2
 
-Board v1 scans 
+Board v1 scans  - without cover
 
 Created: 
     2023-03-04

@@ -40,7 +40,8 @@ labels = {
     "2": "empty",
     "3": "non_plastic",
     "4": "petg",
-    "5": "plastic"
+    "5": "plastic",
+    "6": "other"
 }
 
 class App(customtkinter.CTk):
@@ -147,10 +148,18 @@ class App(customtkinter.CTk):
         self.set_colour = False
 
         self.models = [
-            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model_GradientBoostingClassifier_99_abs_pla_empty.pickle",
-            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model_GradientBoostingClassifier_99_abs_pla_empty_non_plastics_petg_plastics.pickle",
-            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model_MLPClassifier_97_abs_pla_empty.pickle",
-            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model_VotingClassifier_98_abs_pla_empty_non_plastics_petg_plastics.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model1_GradientBoostingClassifier_96_abs_pla_empty_non_plastics_petg_plastics_2023_03_23.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model1_GradientBoostingClassifier_97_abs_pla_empty_other_2023_03_23.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model1_HistogramGradientBoostingClassifier_99_abs_pla_empty_2023_03_23.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model1_MLPClassifier_97_abs_pla_empty_2023_03_23.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model1_RBFSVM_98_abs_pla_empty_2023_03_23.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model1_VotingClassifier_98_abs_pla_empty_non_plastics_petg_plastics_2023_03_23.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model1_VotingClassifier_99_abs_pla_empty_other_2023_03_23.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model2_GradientBoostingClassifier_98_abs_pla_empty_2023_03_23.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model2_GradientBoostingClassifier_99_abs_pla_empty_non_plastics_petg_plastics_2023_03_23.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model2_QDA_0_abs_pla_empty_other_2023_03_23.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model2_RandomForest_0_abs_pla_empty_2023_03_23.pickle",
+            "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/models/model2_RBFSVM_0_abs_pla_empty_non_plastics_petg_plastics_2023_03_23.pickle",
         ]
 
         self.model_names_label = customtkinter.CTkLabel(self, text="Select Model:", anchor="w")

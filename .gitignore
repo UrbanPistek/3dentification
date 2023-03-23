@@ -9,7 +9,6 @@ __pycache__
 .ipynb_checkpoints
 plastic-identifier/scripts/data/base_dataset
 plastic-identifier/scripts/temp
-plastic-identifier/scripts/model_info
 plastic-identifier/scripts/data/synthetic
 
 # Keep specific plots

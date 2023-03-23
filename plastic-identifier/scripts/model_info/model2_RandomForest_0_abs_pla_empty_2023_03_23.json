@@ -1,0 +1,34 @@
+{
+  "dataset": "./data/dataset3",
+  "labels": [
+    "abs",
+    "pla",
+    "empty"
+  ],
+  "date": "2023_03_23",
+  "file": "model2_RandomForest_0_abs_pla_empty_2023_03_23",
+  "id": 2,
+  "train-test-split": 0.2,
+  "score": 0.9970014992503748,
+  "args": "Namespace(verbose=False, save=True, optimize=False, train=True, random_shuffle=False, check_overfitting=False, mock_data=True)",
+  "params": {
+    "bootstrap": true,
+    "ccp_alpha": 0.0,
+    "class_weight": null,
+    "criterion": "gini",
+    "max_depth": 5,
+    "max_features": 8,
+    "max_leaf_nodes": null,
+    "max_samples": null,
+    "min_impurity_decrease": 0.0,
+    "min_samples_leaf": 1,
+    "min_samples_split": 2,
+    "min_weight_fraction_leaf": 0.0,
+    "n_estimators": 25,
+    "n_jobs": null,
+    "oob_score": false,
+    "random_state": null,
+    "verbose": 0,
+    "warm_start": false
+  }
+}

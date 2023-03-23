@@ -42,6 +42,14 @@ LABEL_DIRS = ["/abs", "/pla", "/empty", "/other/non_plastics", "/other/petg", "/
 LABELS = [0, 1, 2, 3, 4, 5]
 LABEL_NAMES = ["abs", "pla", "empty", "non_plastics", "petg", "plastics"]
 
+# LABEL_DIRS = ["/abs", "/pla", "/empty", "/other"]
+# LABELS = [0, 1, 2, 6]
+# LABEL_NAMES = ["abs", "pla", "empty", "other"]
+
+# LABEL_DIRS = ["/abs", "/pla", "/empty"]
+# LABELS = [0, 1, 2]
+# LABEL_NAMES = ["abs", "pla", "empty"]
+
 # For regex
 CALI_ID_REGEX =  r"_id(\d+)_"
 

@@ -41,16 +41,20 @@ from lib.postprocess import SpectraGen
 LEDS = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
 
 # Locations of data
-DATA_DIR = "./data/dataset2"
+MODEL_ID = 2
+DATA_DIR = "./data/dataset3"
 TRAIN_DIR = DATA_DIR + "/train"
 VAL_DIR = DATA_DIR + "/val"
 CALIBRATION_FILES = [
-    "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id1_daytime_calibration_2023_03_05.csv",
-    "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id2_late_afternoon_calibration_2023_03_05.csv",
-    "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id3_daytime_calibration_2023_03_06.csv",
-    "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id4_late_afternoon_calibration_2023_03_15.csv",
+    "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset2/bv1_id1_daytime_calibration_2023_03_05.csv",
+    "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset2/bv1_id2_late_afternoon_calibration_2023_03_05.csv",
+    "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset2/bv1_id3_daytime_calibration_2023_03_06.csv",
+    "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset2/bv1_id4_late_afternoon_calibration_2023_03_15.csv",
     "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset2/bv1_id5_afternoon_calibration_2023_03_19.csv"
 ]
+
+SYNTHETIC_DATA_X = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/synthetic/synthetic_abs_pla_empty_non_plastics_petg_plastics_2023_03_22_size_10012_bal_X.npy"
+SYNTHETIC_DATA_Y = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/synthetic/synthetic_abs_pla_empty_non_plastics_petg_plastics_2023_03_22_size_10012_bal_y.npy"
 
 # Load colour data
 COLOUR_DATA = "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset2/colours.json"
@@ -88,7 +92,7 @@ LABEL_NAMES = ["abs", "pla", "empty", "non_plastics", "petg", "plastics"]
 # LABEL_NAMES = ["abs", "pla", "empty", "petg"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/empty", "/other"]
-# LABELS = [0, 1, 2, 3]
+# LABELS = [0, 1, 2, 6]
 # LABEL_NAMES = ["abs", "pla", "empty", "other"]
 
 # LABEL_DIRS = ["/abs", "/pla", "/empty"]
@@ -274,14 +278,15 @@ def main() -> None:
 
     # -----[ Use specified synthetic data ]-----
     if args.mock_data: 
-        xs = np.load("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/synthetic/synthetic_abs_pla_empty_non_plastics_petg_plastics_2023_03_21_size_2500_X.npy")
-        ys = np.load("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/synthetic/synthetic_abs_pla_empty_non_plastics_petg_plastics_2023_03_21_size_2500_y.npy")
+        xs = np.load(SYNTHETIC_DATA_X)
+        ys = np.load(SYNTHETIC_DATA_Y)
         train_test_ratio = 0.2
         train_x, test_x, train_y, test_y = train_test_split(xs, ys, test_size=train_test_ratio, random_state=42)
 
     else:
         train_x, train_y, test_x, test_y = gen_datasets(Spectra)
 
+    # -----[ Randomly shuffle and split data ]-----
     if args.random_shuffle:
         # Combine train and test
         xs = np.concatenate((train_x, test_x), axis=0)
@@ -299,41 +304,41 @@ def main() -> None:
 
         # -----[ Select Models ]-----
         names = [
-            # "Decision Tree",
-            # "Random Forest",
-            # "Bagging Classifier",
-            # "Extra Trees Classifier",
+            "Decision Tree",
+            "Random Forest",
+            "Bagging Classifier",
+            "Extra Trees Classifier",
             "Gradient Boosting Classifier",
-            # "Voting Classifier",
-            # "Histogram Gradient Boosting Classifier",
-            # "AdaBoost",
-            # "K Nearest Neighbors",
-            # "Linear SVM",
-            # "RBF SVM",
-            # "MLP Classifier",
-            # "QDA",
+            "Voting Classifier",
+            "Histogram Gradient Boosting Classifier",
+            "AdaBoost",
+            "K Nearest Neighbors",
+            "Linear SVM",
+            "RBF SVM",
+            "MLP Classifier",
+            "QDA",
         ]
 
         classifiers = [
-            # DecisionTreeClassifier(max_depth=5),
-            # RandomForestClassifier(max_depth=5, n_estimators=25, max_features=8),
-            # BaggingClassifier(estimator=SVC(),n_estimators=10, random_state=0),
-            # ExtraTreesClassifier(n_estimators=5, random_state=0),
+            DecisionTreeClassifier(max_depth=5),
+            RandomForestClassifier(max_depth=5, n_estimators=25, max_features=8),
+            BaggingClassifier(estimator=SVC(),n_estimators=10, random_state=0),
+            ExtraTreesClassifier(n_estimators=5, random_state=0),
             GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=1, random_state=1),
-            # VotingClassifier(estimators=[
-            #     ('rf', RandomForestClassifier(max_depth=5, n_estimators=10, max_features=8)), 
-            #     ('knn', KNeighborsClassifier(len(LABEL_DIRS))), 
-            #     ('mlp', MLPClassifier(alpha=1, max_iter=10000)),
-            #     ('gb', GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=1, random_state=0)),
-            #     ('hgb', HistGradientBoostingClassifier()),
-            #     ], voting='hard'),
-            # HistGradientBoostingClassifier(),
-            # AdaBoostClassifier(),
-            # KNeighborsClassifier(n_neighbors=len(LABEL_DIRS)),
-            # SVC(kernel="linear", C=0.025),
-            # SVC(gamma=2, C=1),
-            # MLPClassifier(alpha=0.5, max_iter=10000, solver='adam', learning_rate='invscaling', hidden_layer_sizes=200),
-            # QuadraticDiscriminantAnalysis(),
+            VotingClassifier(estimators=[
+                ('rf', RandomForestClassifier(max_depth=5, n_estimators=10, max_features=8)), 
+                ('knn', KNeighborsClassifier(len(LABEL_DIRS))), 
+                ('mlp', MLPClassifier(alpha=1, max_iter=10000)),
+                ('gb', GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=1, random_state=0)),
+                ('hgb', HistGradientBoostingClassifier()),
+                ], voting='hard'),
+            HistGradientBoostingClassifier(),
+            AdaBoostClassifier(),
+            KNeighborsClassifier(n_neighbors=len(LABEL_DIRS)),
+            SVC(kernel="linear", C=0.025),
+            SVC(gamma=2, C=1),
+            MLPClassifier(alpha=0.5, max_iter=10000, solver='adam', learning_rate='invscaling', hidden_layer_sizes=200),
+            QuadraticDiscriminantAnalysis(),
         ]
 
         # -----[ Loop for each Model ]-----
@@ -358,7 +363,7 @@ def main() -> None:
                 datestamp = datetime.now().strftime('%Y/%m/%d').replace('/', '_').replace(' ', '_')
                 score_str = str(round(score, 2) - int(round(score, 3)))[1:].replace(".", "")
                 cat_labels = "_".join(LABEL_NAMES)
-                id = random.randint(0, 100)
+                id = MODEL_ID
                 filename = f"model{id}_{m_name}_{score_str}_{cat_labels}_{datestamp}"
                 
                 # Save model
