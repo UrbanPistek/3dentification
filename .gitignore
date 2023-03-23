@@ -8,8 +8,8 @@ __pycache__
 *.png
 .ipynb_checkpoints
 plastic-identifier/scripts/data/base_dataset
-plastic-identifier/scripts/data/dataset2
-plastic-identifier/scripts/models
+plastic-identifier/scripts/temp
+plastic-identifier/scripts/data/synthetic
 
 # Keep specific plots
 !plastic-identifier/scripts/figures/bv1_pla_v_abs_white.png
@@ -18,5 +18,8 @@ plastic-identifier/scripts/models
 
 # Keep specific data
 !plastic-identifier/scripts/data/dataset1/**/*.csv
+!plastic-identifier/scripts/data/dataset2/**/*.csv
+!plastic-identifier/scripts/data/dataset3/**/*.csv
+!plastic-identifier/scripts/data/dataset4/**/*.csv
 
 # Keep specific model

@@ -619,6 +619,301 @@ def plot10(save=False):
         plt.savefig(f'figures/{filename}.png')
     else:
         plt.show()
+
+def plot11(save=False):
+    """
+    Compare different plastic types
+    """
+
+    # led config
+    leds = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
+    Spectra = SpectraGen(led_wavelengths=leds)
+
+    # calibration data
+    calibration_files = {
+        "1": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id1_daytime_calibration_2023_03_05.csv",
+        "2": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id2_late_afternoon_calibration_2023_03_05.csv",
+        "3": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id3_daytime_calibration_2023_03_06.csv",
+    }
+    df2 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/abs/bv1_id1_abs_white_2023_03_05_1678039435.csv")
+    df4 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/pla/bv1_id1_pla_white_2023_03_05_1678042679.csv")
+    df5 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/non_plastics/bv1_id3_aluminum_2023_03_06_1678121627.csv")
+    df6 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/non_plastics/bv1_id3_clear_glass_2023_03_06_1678121914.csv")
+    df7 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/non_plastics/bv1_id3_cold_rolled_steel_2023_03_06_1678121479.csv")
+    df8 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/non_plastics/bv1_id3_hdf_board_2023_03_06_1678122181.csv")
+    df9 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/petg/bv1_id1_petg_white_2023_03_05_1678047349.csv")
+    df10 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/petg/bv1_id1_petg_red_2023_03_05_1678047709.csv")
+    df11 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/plastics/bv1_id2_plastic_type_2_white_2023_03_05_1678056134.csv")
+    df12 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/plastics/bv1_id2_plastic_type_4_white_2023_03_05_1678055943.csv")
+    df14 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/plastics/bv1_id2_plastic_type_5_white_2023_03_05_1678055866.csv")
+    df15 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/plastics/bv1_id2_plastic_type_6_white_2023_03_05_1678055532.csv")
+    df16 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/plastics/bv1_id2_plastic_type_unknown_pink_2023_03_05_1678056855.csv")
+
+    fig1, (ax1) = plt.subplots(1, 1, gridspec_kw={'height_ratios': [1]}, figsize=(12,7), sharex=True)
+
+    # Overall Plot
+    leds_ordered = sorted(leds)
+    ax1.set_title(f"PLA, ABS, PETG, Plastics, Non_Plastics\nLeds: {leds_ordered}")
+
+    labels = ['abs_white','pla_white', 'non_plastic_al', "non_plastic_glass", "non_plastic_steel", "non_plastic_hdf_board", "petg_white", "petg_red", "plastic_type_2_white", "plastic_type_4_white", "plastic_type_5_white", "plastic_type_6_white", "plastic_unknown"]
+    colors = ['k', 'r', 'c', 'c', 'c', 'c', 'g', 'g', 'm', 'm', 'm', 'm', 'm']
+    markers = ['o', 'v', '1', 's', 'p', '*', 'x', 'd', '|', '.', '+', 'h', 'P', 'D', 'X', '>']
+
+    dfs = [df2, df4, df5, df6, df7, df8, df9, df10, df11, df12, df14, df15, df16]
+    cali_ids = [1, 1, 3, 3, 3, 3, 1, 1, 2, 2, 2, 2, 2]
+
+    for i, df in enumerate(dfs):
+
+        # configure calibration
+        df_cali = pd.read_csv(calibration_files[str(cali_ids[i])])
+        df_cali.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        cali = Spectra.subtract_noise(df=df_cali)
+        Spectra.add_calibration_values(cali)
+        
+        df.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        Spectra.add_measurements(df)
+        ys = Spectra.filtered_spectra()
+
+        # zip & sort for nice plot
+        zipped = list(zip(leds, ys))
+        sorted_zipped = sorted(zipped, key=lambda x: x[0])
+        xs, ys = zip(*sorted_zipped)
+
+        ax1.set_ylim(0, 0.8) # Relative intensity is bound [0,1]
+        ax1.plot(xs, ys, c=colors[i], label=labels[i], marker=markers[i], ms=7)
+
+    ax1.set_ylabel("Relative Intensity")
+    ax1.set_xlabel("Wavelength (nm)")
+    ax1.legend()
+
+    # save plot and results
+    if save:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        # save plot
+        filename = f"bv1_pla_v_abs_v_petg_v_plastics_v_non_plastics"
+        plt.savefig(f'figures/{filename}.png')
+    else:
+        plt.show()
+
+def plot12(save=False):
+    """
+    Compare different plastic types
+    """
+
+    # led config
+    leds = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
+    Spectra = SpectraGen(led_wavelengths=leds)
+
+    # calibration data
+    calibration_files = {
+        "1": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id1_daytime_calibration_2023_03_05.csv",
+        "2": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id2_late_afternoon_calibration_2023_03_05.csv",
+        "3": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id3_daytime_calibration_2023_03_06.csv",
+    }
+
+    df1 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/abs/bv1_id1_abs_black_2023_03_05_1678041025.csv")
+    df3 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/pla/bv1_id1_pla_black_2023_03_05_1678041849.csv")
+    df6 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/non_plastics/bv1_id3_clear_glass_2023_03_06_1678121914.csv")
+    df7 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/non_plastics/bv1_id3_cold_rolled_steel_2023_03_06_1678121479.csv")
+    df13 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/plastics/bv1_id2_plastic_type_5_black_2023_03_05_1678056714.csv")
+    df2 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/plastics/bv1_id2_plastic_type_1_clear_2023_03_05_1678056482.csv")
+    df4 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/plastics/bv1_id2_plastic_type_2_clear_2023_03_05_1678055181.csv")
+    df5 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/val/other/plastics/bv1_id2_plastic_type_5_clear_2023_03_05_1678057773.csv")
+
+    fig1, (ax1) = plt.subplots(1, 1, gridspec_kw={'height_ratios': [1]}, figsize=(12,7), sharex=True)
+
+    # Overall Plot
+    leds_ordered = sorted(leds)
+    ax1.set_title(f"PLA, ABS, Plastics, Non_Plastics (Black)\nLeds: {leds_ordered}")
+
+    labels = ['abs_black', 'pla_black', "non_plastic_glass", "non_plastic_steel", "plastic_type_5_black", "plastic_type_1_clear", "plastic_type_2_clear", "plastic_type_5_clear"]
+    colors = ['k', 'r', 'c', 'g', 'm', 'b', 'y', 'orange']
+    markers = ['o', 'v', '1', 's', 'p', '*', 'x', 'd']
+
+    dfs = [df1, df3, df6, df7, df13, df2, df4, df5]
+    cali_ids = [1, 1, 3, 3, 2, 2, 2, 2]
+
+    for i, df in enumerate(dfs):
+
+        # configure calibration
+        df_cali = pd.read_csv(calibration_files[str(cali_ids[i])])
+        df_cali.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        cali = Spectra.subtract_noise(df=df_cali)
+        Spectra.add_calibration_values(cali)
+        
+        df.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        Spectra.add_measurements(df)
+        ys = Spectra.filtered_spectra()
+
+        # zip & sort for nice plot
+        zipped = list(zip(leds, ys))
+        sorted_zipped = sorted(zipped, key=lambda x: x[0])
+        xs, ys = zip(*sorted_zipped)
+
+        ax1.set_ylim(0, 0.2) # Relative intensity is bound [0,1]
+        ax1.plot(xs, ys, c=colors[i], label=labels[i], marker=markers[i], ms=7)
+
+    ax1.set_ylabel("Relative Intensity")
+    ax1.set_xlabel("Wavelength (nm)")
+    ax1.legend()
+
+    # save plot and results
+    if save:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        # save plot
+        filename = f"bv1_pla_v_abs_v_plastics_v_non_plastics_black"
+        plt.savefig(f'figures/{filename}.png')
+    else:
+        plt.show()
+
+def plot13(save=False):
+    """
+    Compare abs, pla, petg
+    """
+
+    # led config
+    leds = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
+    Spectra = SpectraGen(led_wavelengths=leds)
+
+    # calibration data
+    calibration_files = {
+        "1": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id1_daytime_calibration_2023_03_05.csv",
+        "2": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id2_late_afternoon_calibration_2023_03_05.csv",
+        "3": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id3_daytime_calibration_2023_03_06.csv",
+    }
+    df1 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/abs/bv1_id1_abs_white_2023_03_05_1678039435.csv")
+    df2 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/pla/bv1_id1_pla_white_2023_03_05_1678042679.csv")
+    df3 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/abs/bv1_id1_abs_black_2023_03_05_1678041025.csv")
+    df4 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/pla/bv1_id1_pla_black_2023_03_05_1678041849.csv")
+    df5 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/petg/bv1_id1_petg_white_2023_03_05_1678047349.csv")
+    df6 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/petg/bv1_id1_petg_red_2023_03_05_1678047709.csv")
+    df7 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/val/other/petg/bv1_id1_petg_orange_2023_03_05_1678048368.csv")
+    df8 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/abs/bv1_id1_abs_red_2023_03_05_1678040622.csv")
+    df9 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/pla/bv1_id1_pla_red_2023_03_05_1678042799.csv")
+
+    fig1, (ax1) = plt.subplots(1, 1, gridspec_kw={'height_ratios': [1]}, figsize=(12,7), sharex=True)
+
+    # Overall Plot
+    leds_ordered = sorted(leds)
+    ax1.set_title(f"PLA, ABS, PETG\nLeds: {leds_ordered}")
+
+    labels = ['abs_white','pla_white', 'abs_black', 'pla_black', 'petg_white', 'petg_red', 'petg_orange', 'abs_red', 'pla_red']
+    colors = ['k', 'r', 'k', 'r', 'b', 'b', 'b', 'k', 'r']
+    markers = ['o', 'v', '1', 's', 'p', '*', 'x', 'd', '>']
+
+    dfs = [df1, df2, df3, df4, df5, df6, df7, df8, df9]
+    cali_ids = [1, 1, 1, 1, 1, 1, 1, 1, 1]
+
+    for i, df in enumerate(dfs):
+
+        # configure calibration
+        df_cali = pd.read_csv(calibration_files[str(cali_ids[i])])
+        df_cali.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        cali = Spectra.subtract_noise(df=df_cali)
+        Spectra.add_calibration_values(cali)
+        
+        df.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        Spectra.add_measurements(df)
+        ys = Spectra.filtered_spectra()
+
+        # zip & sort for nice plot
+        zipped = list(zip(leds, ys))
+        sorted_zipped = sorted(zipped, key=lambda x: x[0])
+        xs, ys = zip(*sorted_zipped)
+
+        ax1.set_ylim(0, 0.8) # Relative intensity is bound [0,1]
+        ax1.plot(xs, ys, c=colors[i], label=labels[i], marker=markers[i], ms=7)
+
+    ax1.set_ylabel("Relative Intensity")
+    ax1.set_xlabel("Wavelength (nm)")
+    ax1.legend()
+
+    # save plot and results
+    if save:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        # save plot
+        filename = f"bv1_pla_v_abs_v_petg"
+        plt.savefig(f'figures/{filename}.png')
+    else:
+        plt.show()
+
+def plot14(save=False):
+    """
+    Compare petg
+    """
+
+    # led config
+    leds = [850, 940, 1050, 890, 1300, 880, 1550, 1650]
+    Spectra = SpectraGen(led_wavelengths=leds)
+
+    # calibration data
+    calibration_files = {
+        "1": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id1_daytime_calibration_2023_03_05.csv",
+        "2": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id2_late_afternoon_calibration_2023_03_05.csv",
+        "3": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/bv1_id3_daytime_calibration_2023_03_06.csv",
+        "5": "/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset2/bv1_id5_afternoon_calibration_2023_03_19.csv"
+    }
+    df5 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/petg/bv1_id1_petg_white_2023_03_05_1678047349.csv")
+    df6 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/petg/bv1_id1_petg_red_2023_03_05_1678047709.csv")
+    df7 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/val/other/petg/bv1_id1_petg_orange_2023_03_05_1678048368.csv")
+    df8 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/train/other/petg/bv1_id1_petg_clear_2023_03_05_1678047503.csv")
+    df9 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset1/val/other/petg/bv1_id1_petg_clear2_2023_03_05_1678048265.csv")
+    df10 = pd.read_csv("/home/urban/urban/uw/fydp/3dentification/plastic-identifier/scripts/data/dataset2/train/other/petg/bv1_id5_petg_blue_2023_03_19_1679260297.csv")
+
+    fig1, (ax1) = plt.subplots(1, 1, gridspec_kw={'height_ratios': [1]}, figsize=(12,7), sharex=True)
+
+    # Overall Plot
+    leds_ordered = sorted(leds)
+    ax1.set_title(f"PETG\nLeds: {leds_ordered}")
+
+    labels = ['petg_white', 'petg_red', 'petg_orange', 'petg_clear', 'petg_clear_2', 'petg_blue']
+    colors = ['k', 'r', 'c', 'm', 'b', 'g']
+    markers = ['o', 'v', '1', 's', '+', 'x']
+
+    dfs = [df5, df6, df7, df8, df9, df10]
+    cali_ids = [1, 1, 1, 1, 1, 5]
+
+    for i, df in enumerate(dfs):
+
+        # configure calibration
+        df_cali = pd.read_csv(calibration_files[str(cali_ids[i])])
+        df_cali.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        cali = Spectra.subtract_noise(df=df_cali)
+        Spectra.add_calibration_values(cali)
+        
+        df.rename(columns={"Unnamed: 0": "units"}, inplace=True)
+        Spectra.add_measurements(df)
+        ys = Spectra.filtered_spectra()
+
+        # zip & sort for nice plot
+        zipped = list(zip(leds, ys))
+        sorted_zipped = sorted(zipped, key=lambda x: x[0])
+        xs, ys = zip(*sorted_zipped)
+
+        ax1.set_ylim(0, 0.8) # Relative intensity is bound [0,1]
+        ax1.plot(xs, ys, c=colors[i], label=labels[i], marker=markers[i], ms=7)
+
+    ax1.set_ylabel("Relative Intensity")
+    ax1.set_xlabel("Wavelength (nm)")
+    ax1.legend()
+
+    # save plot and results
+    if save:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        # save plot
+        filename = f"bv1_petg"
+        plt.savefig(f'figures/{filename}.png')
+    else:
+        plt.show()
+    
     
 def main():
     print("Generating Plots...")
@@ -634,7 +929,11 @@ def main():
     # plot7(save=True)
     # plot8(save=True)
     # plot9(save=True)
-    plot10(save=True)
+    # plot10(save=True)
+    # plot11(save=True)
+    # plot12(save=True)
+    # plot13(save=True)
+    plot14(save=True)
 
 if __name__ == "__main__":
     main()
