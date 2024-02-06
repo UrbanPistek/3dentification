@@ -33,7 +33,7 @@ Using a small USB camera, a live video feed captures the colour of the sample by
 By collecting samples of known material, scanning them, and labelling that data with the material of the sample, we created a dataset specific to our sensor which we used to train a software model how to classify new, unlabelled samples. By the time the poster was made, the software model could accurately distinguish between PLA and ABS 97% of the time, but by collecting more samples and making our dataset larger, that result reached over 99%. 
 
 ## Languages and Technologies
-Python, C++, Rust, Arduino, Docker
+Python, C++, Rust, Arduino, Docker, PlatformIO
 
 Credits:
 Urban Pistek
