@@ -14,9 +14,9 @@ While solutions exist for industrial-scale 3D-printed waste, hobbyists, librarie
 
 There is one gap creating this persisting problem. While the technology to recycle 3D-printed thermoplastic waste exists, no technology exists to sort it reliably. 3D-printed waste can be any shape, colour, and density, and aren't classified with numeric triangle recycling symbols ("resin identification codes"). As a result, municipal recyclers can't sort out this waste stream, and it end up in the landfill.
 
-Our interdisciplinary 4th year engineering "capstone design" team (2 mechatronics eng, 1 chemical eng, 1 environmental eng) set out to tackle this problem. We partnered with [3cycle][https://3cycle.ca], a local startup and social entreprise working on establishing waste collection and recycling for small-scale 3D-printer users. 3cycle graciously helped fund this project -- many thanks!
+Our interdisciplinary 4th year engineering "capstone design" team (2 mechatronics eng, 1 chemical eng, 1 environmental eng) set out to tackle this problem. We partnered with [3cycle](https://3cycle.ca), a local startup and social entreprise working on establishing waste collection and recycling for small-scale 3D-printer users. 3cycle graciously helped fund this project -- many thanks!
 
-The code in this repository runs the NIR spectroscopy plastic material identification sensor we built based on the open-source project [Plastic Scanner][https://github.com/Plastic-Scanner], the CV sensor for colour identification, and the user interface which controls it all.
+The code in this repository runs the NIR spectroscopy plastic material identification sensor we built based on the open-source project [Plastic Scanner](https://github.com/Plastic-Scanner), the CV sensor for colour identification, and the user interface which controls it all.
 
 ## Technologies Used
 
