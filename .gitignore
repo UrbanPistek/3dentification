@@ -6,6 +6,7 @@ __pycache__
 .pio
 *.csv
 *.png
+!POSTER.png
 .ipynb_checkpoints
 plastic-identifier/scripts/data/base_dataset
 plastic-identifier/scripts/temp
