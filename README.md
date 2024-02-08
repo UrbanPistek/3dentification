@@ -8,11 +8,11 @@ Goal: To reliably classify PLA, ABS, PETG, and other common materials used in 3D
 
 3D-printing is a growing industry, and with it comes a growing waste problem. 7.1 MILLION kg of 3D-printed thermoplastics are deposited in landfills every year in the USA alone. 
 
-While 3D-printed plastic parts are very easy to recycle when they are reliably sorted, even a few specks of contaminations from other plastics can ruin the material properties of the recycled filament and make it impossible to reuse in a 3D-printer.
+While 3D-printed plastic parts are very easy to recycle when they are reliably sorted, even a few specks of contamination from other plastics can ruin the material properties of the recycled filament and make it impossible to reuse in a 3D-printer.
 
 While solutions exist for industrial-scale 3D-printed waste, hobbyists, libraries, makerspaces, and other smaller users have no choice but to dispose of their test prints, failed prints, and support material in the garbage. 
 
-There is one gap creating this persisting problem. While the technology to recycle 3D-printed thermoplastic waste exists, no technology exists to sort it reliably. 3D-printed waste can be any shape, colour, and density, and aren't classified with numeric triangle recycling symbols ("resin identification codes"). As a result, municipal recyclers can't sort out this waste stream, and it end up in the landfill.
+There is one gap creating this persisting problem. While the technology to recycle 3D-printed thermoplastic waste exists, no technology exists to sort it reliably. 3D-printed waste can be any shape, colour, and density, and aren't classified with numeric triangle recycling symbols ("resin identification codes"). As a result, municipal recyclers can't sort out this waste stream, and it ends up in the landfill.
 
 Our interdisciplinary 4th year engineering "capstone design" team (2 mechatronics eng, 1 chemical eng, 1 environmental eng) set out to tackle this problem. We partnered with [3cycle](https://3cycle.ca), a local startup and social entreprise working on establishing waste collection and recycling for small-scale 3D-printer users. 3cycle graciously helped fund this project -- many thanks!
 
