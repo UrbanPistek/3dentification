@@ -1,0 +1,31 @@
+{
+  "dataset": "./data/dataset2",
+  "labels": [
+    "abs",
+    "pla",
+    "empty"
+  ],
+  "date": "2023_03_23",
+  "file": "model1_RBFSVM_98_abs_pla_empty_2023_03_23",
+  "id": 1,
+  "train-test-split": 0.2,
+  "score": 0.9838709677419355,
+  "args": "Namespace(verbose=False, save=True, optimize=False, train=True, random_shuffle=True, check_overfitting=False, mock_data=False)",
+  "params": {
+    "C": 1,
+    "break_ties": false,
+    "cache_size": 200,
+    "class_weight": null,
+    "coef0": 0.0,
+    "decision_function_shape": "ovr",
+    "degree": 3,
+    "gamma": 2,
+    "kernel": "rbf",
+    "max_iter": -1,
+    "probability": false,
+    "random_state": null,
+    "shrinking": true,
+    "tol": 0.001,
+    "verbose": false
+  }
+}

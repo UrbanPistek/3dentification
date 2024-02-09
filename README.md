@@ -33,7 +33,7 @@ Using a small USB camera, a live video feed captures the colour of the sample by
 By collecting samples of known material, scanning them, and labelling that data with the material of the sample, we created a dataset specific to our sensor which we used to train a software model how to classify new, unlabelled samples. By the time the poster was made, the software model could accurately distinguish between PLA and ABS 97% of the time, but by collecting more samples and making our dataset larger, that result reached over 99%. 
 
 ## Languages and Technologies
-Python, C++, Rust, Arduino, Docker, PlatformIO
+Python, C++, Arduino, PlatformIO, Open-CV, Scikit-Learn
 
 Credits:
 Urban Pistek
@@ -43,31 +43,23 @@ Maria Fraser-Semenoff
 
 Special thanks to 3cycle founder Jason Amri, the Plastic Scanner team, Velocity Science, advisors Tizazu Mekonnen, Simar Saini, Oscar Nespoli, and Binh Minh Trinh from the Polymers Lab, and Jeff at Accelerated Systems Inc. for making this project possible.
 
-## Notes on Running the Application
+## Running the Application
 
-Ensure docker daemon is running: 
-```
-sudo systemctl start docker
-```
+### Firmware
 
-Run the entire application (add `--build` to rebuild):
-```
-docker compose up -d
-```
+Flash the custom firmware onto the development board.
 
-Take down:
-```
-docker compose down
-```
+> [Firmware Documentation](firmware/README.md)
 
-### Run Kafka Instance 
+### Scripts
 
-Start:
+Running Python Scripts to Train Models, Generate Plots, GUI, Synthetic data generation and computer vision applications. 
+
+Create the python environment & activate it:
 ```
-docker compose -f ./utils/kafka.yaml up -d
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-Take down containers:
-```
-docker compose -f ./utils/kafka.yaml down
-```
+> [Scripts Documentation](scripts/README.md)

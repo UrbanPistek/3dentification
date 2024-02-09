@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+  
+  kafka:
+    image: wurstmeister/kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_CREATE_TOPICS: "debug"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  
+  app:
+    container_name: app
+    build: ./
+    network_mode: "host"
+
+  detection:
+    container_name: detection_agent
+    build: ./plastic-cv 
+    network_mode: "host"
+  
+  reader:
+    container_name: reader_agent
+    build: ./plastic-identifier
+    network_mode: "host"
+
+  sqlite3:
+    container_name: sqlite3
+    image: nouchka/sqlite3:latest
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./db:/root/db/
+    restart: unless-stopped
