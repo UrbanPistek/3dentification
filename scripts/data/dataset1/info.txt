@@ -1,0 +1,10 @@
+# dataset 1
+
+Boad v1 scans - without cover
+
+Created: 
+    2023-03-04
+
+Summary: 
+    Dataset collected during the day time, during a sunday day at home.
+    No reference is created so that data is not normalized.
